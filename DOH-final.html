@@ -462,17 +462,60 @@ select.trk-inp{cursor:pointer;}
               <thead>
                 <tr>
                   <th>Branch</th>
-                  <th style="text-align:center">NPS Score<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥75 (scale 1–100)</span></th>
-                  <th style="text-align:center">OSAT Score<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥4.0 (scale 1–5)</span></th>
+                  <th style="text-align:center">NPS<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥75</span></th>
+                  <th style="text-align:center">OSAT<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥4.0</span></th>
+                  <th style="text-align:center">LtRet<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">loyalty score</span></th>
+                  <th style="text-align:center">Respondents</th>
                   <th style="text-align:center">Complaints</th>
-                  <th style="text-align:center">Detractors</th>
-                  <th style="text-align:center">Total Cases</th>
+                  <th style="text-align:center">NFT %</th>
+                  <th style="text-align:center">Period</th>
                 </tr>
               </thead>
               <tbody id="others-tbody"></tbody>
             </table>
           </div>
+  
+      <!-- MANUAL NPS ENTRY -->
+      <div class="card" style="margin-top:14px;">
+        <div class="card-hd">
+          <span class="hd-title">Update NPS / OSAT</span>
+          <button class="gen-btn" onclick="toggleNPSForm()" id="nps-form-btn">+ Add Entry</button>
         </div>
+        <div id="nps-form" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border);">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px;">
+            <select id="nps-branch" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);">
+              <option value="">Branch</option>
+              <option value="JB3353">JB3353 Gil Fernando</option>
+              <option value="JB0087">JB0087 Marikina Bayan</option>
+              <option value="JB3595">JB3595 Ejercito</option>
+              <option value="JB3702">JB3702 Marilaque</option>
+              <option value="JB3753">JB3753 Highway 2000</option>
+            </select>
+            <input type="text" id="nps-period" placeholder="Period (e.g. Apr 2026)" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-score" placeholder="NPS Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-osat" placeholder="OSAT Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-ltret" placeholder="LtRet Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-resp" placeholder="Respondents" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-comp" placeholder="Complaints" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+            <input type="number" id="nps-nft" placeholder="NFT %" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="saveNPSEntry()" style="padding:6px 18px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Save</button>
+            <button onclick="toggleNPSForm()" style="padding:6px 14px;background:var(--gray-s);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer;">Cancel</button>
+          </div>
+          <div id="nps-status" style="font-size:12px;margin-top:6px;color:var(--green);"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>Branch</th><th>Period</th><th>NPS</th><th>OSAT</th><th>LtRet</th>
+              <th>Respondents</th><th>Complaints</th><th>NFT %</th><th>Date Updated</th><th></th>
+            </tr></thead>
+            <tbody id="nps-history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      </div>
         <div class="card" id="voc-panel">
           <div class="card-hd"><span class="hd-title">VOC Feed</span><span id="voc-count" style="font-size:12px;color:var(--muted)"></span></div>
           <div style="padding:8px 10px;border-bottom:1px solid var(--border);"><input class="search-bar" id="voc-search" type="text" placeholder="Search VOC..." oninput="renderVOC()"></div>
@@ -575,8 +618,12 @@ select.trk-inp{cursor:pointer;}
         <div style="overflow-x:auto;">
           <table class="tbl">
             <thead><tr>
-              <th>Branch</th><th style="text-align:right">Days</th>
-              <th style="text-align:right">VOC Cases</th><th style="text-align:right">Complaints</th>
+              <th>Branch</th>
+              <th style="text-align:center">NPS</th>
+              <th style="text-align:center">OSAT</th>
+              <th style="text-align:center">Respondents</th>
+              <th style="text-align:center">Complaints</th>
+              <th style="text-align:center">Period</th>
             </tr></thead>
             <tbody id="mtd-nps-tbody"></tbody>
           </table>
@@ -1081,6 +1128,16 @@ let submissions=_merged;
 try{localStorage.setItem('jb_sub3',JSON.stringify(submissions));}catch(e){}
 let vocEntries=JSON.parse(localStorage.getItem('jb_voc_all')||'[]');
 let vocData=vocEntries;
+// Manual NPS entries from Qualtrics screenshots
+const _npsPreload=[{"branch": "JB3595", "date": "2026-04-19", "period": "Apr 2026", "nps": 50.0, "osat": 4.4, "respondents": 286, "complaints": 8, "nft_pct": 1.8, "ltret": 4.6}, {"branch": "JB3353", "date": "2026-04-19", "period": "Apr 2026", "nps": 71.4, "osat": 4.4, "respondents": 248, "complaints": 7, "nft_pct": 1.6, "ltret": 4.7}, {"branch": "JB0087", "date": "2026-04-19", "period": "Apr 2026", "nps": 50.0, "osat": 4.0, "respondents": 59, "complaints": 6, "nft_pct": 1.8, "ltret": 5.0}, {"branch": "JB3702", "date": "2026-04-19", "period": "Apr 2026", "nps": 66.7, "osat": 4.2, "respondents": 274, "complaints": 13, "nft_pct": 4.0, "ltret": 4.2}];
+const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
+// Merge: preload + any additional stored entries
+const _npsMerged=_npsPreload.slice();
+_npsStored.forEach(function(s){
+  if(!_npsMerged.find(function(p){return p.branch===s.branch&&p.period===s.period;}))_npsMerged.push(s);
+});
+let npsManual=_npsMerged;
+try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
 let viewDate=today;
 
 // branch keyword map for Qualtrics auto-detect
@@ -1236,12 +1293,22 @@ function renderMTD(){
         <td style="text-align:right"><span class="kv ${kwhOk?'ok':'br'}">${avgKwh!==null?avgKwh+' kWh':'—'}</span></td>
         <td style="text-align:right"><span class="kv ${waterOk?'ok':'br'}">${avgWater!==null?avgWater+' m³':'—'}</span></td>
       </tr>`,
-      nps:`<tr>
+      nps:(()=>{
+      const npsEntry=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date))[0]||null;
+      const nps=npsEntry?npsEntry.nps:null;
+      const osat=npsEntry?npsEntry.osat:null;
+      const comp=npsEntry?npsEntry.complaints:null;
+      const resp=npsEntry?npsEntry.respondents:null;
+      const period=npsEntry?npsEntry.period:'—';
+      return `<tr>
         <td><span class="b-code">${b.code}</span><span class="b-name">${b.name}</span></td>
-        <td style="text-align:right"><span class="kv ${days>0?'ok':'em'}">${days||'—'}</span></td>
-        <td style="text-align:right"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${vocCount>0?'var(--amber)':'#C7C7CC'}">${vocCount}</span></td>
-        <td style="text-align:right"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${compCount>0?'var(--red)':'#C7C7CC'}">${compCount}</span></td>
-      </tr>`,
+        <td style="text-align:center"><span class="kv ${nps===null?'em':nps<75?'br':'ok'}">${nps!==null?nps:'—'}</span></td>
+        <td style="text-align:center"><span class="kv ${osat===null?'em':osat<4.0?'br':'ok'}">${osat!==null?osat:'—'}</span></td>
+        <td style="text-align:center">${resp!==null?resp:'—'}</td>
+        <td style="text-align:center"><span class="kv ${comp===null?'em':comp>10?'br':comp>5?'wa':'ok'}">${comp!==null?comp:'—'}</span></td>
+        <td style="text-align:center;font-size:11px;color:var(--muted)">${period}</td>
+      </tr>`;
+    })(),
     };
   });
   if(tbody)tbody.innerHTML=branchData.map(d=>d.sales).join('');
@@ -1600,36 +1667,32 @@ function renderCostsTable(){
 function renderOthersTable(){
   const tbody=document.getElementById('others-tbody');
   tbody.innerHTML='';
+  const ym=viewDate.slice(0,7);
   BRANCHES.forEach(b=>{
-    const bvoc=vocData.filter(v=>v.branch===b.code||(v.store&&v.store.toLowerCase().includes(b.name.toLowerCase().split(' ')[0])));
-    const npsRaw=bvoc.filter(v=>v.nps!==null&&v.nps!==undefined).map(v=>parseFloat(v.nps));
-    const osatList=bvoc.filter(v=>v.osat!==null&&v.osat!==undefined).map(v=>parseFloat(v.osat));
-    // proper NPS: (promoters >=75 minus detractors <=50) / total * 100
-    const promoters=npsRaw.filter(n=>n>=NPS_PROMOTER).length;
-    const detractorsNps=npsRaw.filter(n=>n<=NPS_DETRACTOR).length;
-    const npsScore=npsRaw.length?Math.round(((promoters-detractorsNps)/npsRaw.length)*100):null;
-    const avgOSAT=osatList.length?(osatList.reduce((a,c)=>a+c,0)/osatList.length).toFixed(1):null;
-    const complaints=bvoc.filter(v=>v.type==='complaint').length;
-    const detractors=bvoc.filter(v=>v.type==='detractor').length;
-    const total=bvoc.length;
-    const npsCls=npsScore===null?'em':npsScore>=NPS_TARGET?'pro':npsScore>=0?'pas':'det';
-    const osatCls=avgOSAT===null?'':parseFloat(avgOSAT)>=OSAT_TARGET?'high':parseFloat(avgOSAT)>=3?'mid':'low';
-
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
+    // Get latest manual NPS entry for this branch
+    const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
+    const latest=entries[0]||null;
+    const nps=latest?latest.nps:null;
+    const osat=latest?latest.osat:null;
+    const ltret=latest?latest.ltret:null;
+    const resp=latest?latest.respondents:null;
+    const comp=latest?latest.complaints:null;
+    const nft=latest?latest.nft_pct:null;
+    const period=latest?latest.period:'—';
+    const npsBr=nps!==null&&nps<75;
+    const osatBr=osat!==null&&osat<4.0;
+    const ltretBr=ltret!==null&&ltret<4.0;
+    const fmt=v=>v!==null?v:'—';
+    tbody.innerHTML+=`<tr>
       <td><span class="b-code">${b.code}</span><span class="b-name">${b.name}</span></td>
-      <td style="text-align:center">
-        <span class="nps-score ${npsCls}">${npsScore!==null?npsScore:'—'}</span>
-        ${npsScore!==null?`<span style="font-size:10px;display:block;color:${npsScore>=NPS_TARGET?'var(--green)':'var(--red)'};">${npsScore>=NPS_TARGET?'✓ On target':'✗ Below '+NPS_TARGET}</span>`:''}
-      </td>
-      <td style="text-align:center">
-        <span class="osat-score ${osatCls}">${avgOSAT!==null?avgOSAT:'—'}</span>
-        ${avgOSAT!==null?`<span style="font-size:10px;display:block;color:${parseFloat(avgOSAT)>=OSAT_TARGET?'var(--green)':'var(--red)'};">${parseFloat(avgOSAT)>=OSAT_TARGET?'✓ On target':'✗ Below '+OSAT_TARGET}</span>`:''}
-      </td>
-      <td style="text-align:center">${complaints>0?`<span style="font-size:13px;font-weight:700;color:var(--red);">${complaints}</span>`:`<span class="kv em">0</span>`}</td>
-      <td style="text-align:center">${detractors>0?`<span style="font-size:13px;font-weight:700;color:var(--amber);">${detractors}</span>`:`<span class="kv em">0</span>`}</td>
-      <td style="text-align:center"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${total>0?'var(--text)':'#C7C7CC'}">${total||'—'}</span></td>`;
-    tbody.appendChild(tr);
+      <td style="text-align:center"><span class="kv ${nps===null?'em':npsBr?'br':'ok'}">${fmt(nps)}</span></td>
+      <td style="text-align:center"><span class="kv ${osat===null?'em':osatBr?'br':'ok'}">${fmt(osat)}</span></td>
+      <td style="text-align:center"><span class="kv ${ltret===null?'em':ltretBr?'br':'ok'}">${fmt(ltret)}</span></td>
+      <td style="text-align:center"><span class="kv ${resp===null?'em':'ok'}">${fmt(resp)}</span></td>
+      <td style="text-align:center"><span class="kv ${comp===null?'em':comp>10?'br':comp>5?'wa':'ok'}">${fmt(comp)}</span></td>
+      <td style="text-align:center"><span class="kv ${nft===null?'em':nft>3?'br':nft>1.5?'wa':'ok'}">${nft!==null?nft+'%':'—'}</span></td>
+      <td style="text-align:center;font-size:11px;color:var(--muted)">${period}</td>
+    </tr>`;
   });
 }
 
@@ -1916,31 +1979,21 @@ function generateAnalysis(){
     });
     html+=`</div></div>`;
 
-    // RANKING 2: NPS/OSAT (best → worst, branches with no data at bottom)
+    // RANKING 2: NPS/OSAT — uses latest manual NPS entry per branch (MTD from Qualtrics)
     const allNpsRanked=BRANCHES.map(b=>{
-      const bvoc=vocEntries.filter(v=>v.date===viewDate&&v.branch===b.code&&v.nps!==null&&v.nps!==undefined);
-      const pros=bvoc.filter(v=>parseFloat(v.nps)>=NPS_PROMOTER).length;
-      const dets=bvoc.filter(v=>parseFloat(v.nps)<=NPS_DETRACTOR).length;
-      const nps=bvoc.length?Math.round(((pros-dets)/bvoc.length)*100):null;
-      const osatVals=vocEntries.filter(v=>v.date===viewDate&&v.branch===b.code&&v.osat!==null).map(v=>parseFloat(v.osat));
-      const avgOsat=osatVals.length?(osatVals.reduce((a,v)=>a+v,0)/osatVals.length).toFixed(1):null;
-      return{name:b.name,nps,avgOsat,count:bvoc.length};
+      const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
+      const latest=entries[0]||null;
+      const nps=latest?latest.nps:null;
+      const avgOsat=latest?String(latest.osat):null;
+      const count=latest?latest.respondents:0;
+      return{name:b.name,nps,avgOsat,count};
     }).sort((a,b)=>{
       if(a.nps!==null&&b.nps!==null)return b.nps-a.nps;
-      if(a.nps!==null)return -1; if(b.nps!==null)return 1; return 0;
+      if(a.nps!==null)return -1;
+      if(b.nps!==null)return 1;
+      return 0;
     });
-    html+=`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">⭐ NPS / OSAT Score<span style="font-weight:400;color:var(--muted);margin-left:6px;">NPS tgt ≥${NPS_TARGET} · OSAT tgt ≥${OSAT_TARGET}</span></div><div style="display:flex;flex-direction:column;gap:4px;">`;
-    allNpsRanked.forEach((b,i)=>{
-      const npsOk=b.nps!==null&&b.nps>=NPS_TARGET;
-      const osatOk=b.avgOsat!==null&&parseFloat(b.avgOsat)>=OSAT_TARGET;
-      const val=b.nps!==null?`NPS ${b.nps}${b.avgOsat?' · OSAT '+b.avgOsat:''}${b.count?' ('+b.count+' resp)':''}`:b.count?`No NPS · OSAT ${b.avgOsat||'—'}`:'No VOC data';
-      const cl=b.nps===null?'var(--muted)':b.nps>=NPS_TARGET?'var(--green)':b.nps>=0?'var(--amber)':'var(--red)';
-      const flag=b.nps===null?'':(b.nps<0?'DETRACTOR HEAVY':b.nps<NPS_TARGET?'BELOW TARGET':'');
-      html+=rankRow(rankBadge(i),b.name,val,cl,flag);
-    });
-    html+=`</div></div>`;
-
-    // RANKING 3: 5 separate mini-rankings (Cost Control)
+// RANKING 3: 5 separate mini-rankings (Cost Control)
     const _dateLbl=(()=>{
       const d=new Date(viewDate+'T00:00');
       const fmt=(opts)=>d.toLocaleDateString('en-US',opts);
@@ -2046,6 +2099,40 @@ function generateAnalysis(){
     gasRanked.forEach((s,i)=>{
       const val=s.noData?'No data':(s.val>0?`₱${s.val.toLocaleString()}/m³`:'—');
       const cl=s.noData?'var(--muted)':(s.val>0?'var(--green)':'var(--muted)');
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+
+    // RANKING 4: Transaction Count (highest to lowest)
+    const tcRanked=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      return{name:b?b.name:s.branch,tc:s.tc||0,noData:!s.tc};
+    }).sort((a,b)=>b.tc-a.tc);
+
+    html+=`<div style="break-inside:avoid;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Transaction Count</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    tcRanked.forEach((s,i)=>{
+      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
+      const cl=s.noData?'var(--muted)':'var(--text)';
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+    // RANKING 5: Average Check (highest to lowest)
+    const acRanked=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const ac=s.tc>0?Math.round(s.nsales/s.tc):0;
+      return{name:b?b.name:s.branch,ac,noData:!ac};
+    }).sort((a,b)=>b.ac-a.ac);
+
+    html+=`<div style="break-inside:avoid;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Average Check</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    acRanked.forEach((s,i)=>{
+      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
+      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
       html+=rankRow(rankBadge(i),s.name,val,cl,'');
     });
     html+=`</div></div>`;
@@ -3200,6 +3287,78 @@ async function syncFromSheet(silent){
   }catch(e){console.error('[Sync]',e);if(!silent)showBadge('err','Sync failed: '+e.message);}
 }
 setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=8&&h<13)syncFromSheet(true);},15*60*1000);},3000);
+
+function toggleNPSForm(){
+  const f=document.getElementById('nps-form');
+  const btn=document.getElementById('nps-form-btn');
+  const show=f.style.display==='none';
+  f.style.display=show?'block':'none';
+  btn.textContent=show?'✕ Cancel':'+ Add Entry';
+  if(show){
+    document.getElementById('nps-period').value='Apr 2026';
+    document.getElementById('nps-status').textContent='';
+  }
+}
+
+function saveNPSEntry(){
+  const branch=document.getElementById('nps-branch').value;
+  const period=document.getElementById('nps-period').value.trim();
+  const nps=parseFloat(document.getElementById('nps-score').value);
+  const osat=parseFloat(document.getElementById('nps-osat').value);
+  const ltret=parseFloat(document.getElementById('nps-ltret').value);
+  const resp=parseInt(document.getElementById('nps-resp').value)||0;
+  const comp=parseInt(document.getElementById('nps-comp').value)||0;
+  const nft=parseFloat(document.getElementById('nps-nft').value)||0;
+  const status=document.getElementById('nps-status');
+  if(!branch||!period||isNaN(nps)||isNaN(osat)){
+    status.style.color='var(--red)';
+    status.textContent='Fill in Branch, Period, NPS and OSAT at minimum.';
+    return;
+  }
+  // Remove existing entry for same branch+period
+  npsManual=npsManual.filter(function(n){return !(n.branch===branch&&n.period===period);});
+  npsManual.push({branch,period,date:today,nps,osat,ltret:isNaN(ltret)?null:ltret,respondents:resp,complaints:comp,nft_pct:nft});
+  try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
+  status.style.color='var(--green)';
+  status.textContent='✓ Saved — '+branch+' '+period;
+  renderOthersTable();
+  renderNPSHistory();
+  // Clear form
+  ['nps-branch','nps-score','nps-osat','nps-ltret','nps-resp','nps-comp','nps-nft'].forEach(function(id){document.getElementById(id).value='';});
+}
+
+function deleteNPSEntry(branch,period){
+  if(!confirm('Delete NPS entry for '+branch+' '+period+'?'))return;
+  npsManual=npsManual.filter(function(n){return !(n.branch===branch&&n.period===period);});
+  try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
+  renderOthersTable();
+  renderNPSHistory();
+}
+
+function renderNPSHistory(){
+  const tbody=document.getElementById('nps-history-tbody');
+  if(!tbody)return;
+  const sorted=[...npsManual].sort(function(a,b){return b.date.localeCompare(a.date)||a.branch.localeCompare(b.branch);});
+  if(sorted.length===0){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No NPS entries yet.</td></tr>';return;}
+  tbody.innerHTML=sorted.map(function(n){
+    const b=BRANCHES.find(function(x){return x.code===n.branch;})||{name:n.branch};
+    const npsBr=n.nps<75;const osatBr=n.osat<4.0;
+    return '<tr>'+
+      '<td><span class="b-code">'+n.branch+'</span><span style="font-size:13px;font-weight:600">'+b.name+'</span></td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+n.period+'</td>'+
+      '<td style="text-align:center"><span class="kv '+(npsBr?'br':'ok')+'">'+n.nps+'</span></td>'+
+      '<td style="text-align:center"><span class="kv '+(osatBr?'br':'ok')+'">'+n.osat+'</span></td>'+
+      '<td style="text-align:center"><span class="kv '+(n.ltret&&n.ltret<4.0?'br':'ok')+'">'+(n.ltret||'—')+'</span></td>'+
+      '<td style="text-align:center">'+( n.respondents||'—')+'</td>'+
+      '<td style="text-align:center"><span class="kv '+(n.complaints>10?'br':n.complaints>5?'wa':'ok')+'">'+n.complaints+'</span></td>'+
+      '<td style="text-align:center"><span class="kv '+(n.nft_pct>3?'br':n.nft_pct>1.5?'wa':'ok')+'">'+n.nft_pct+'%</span></td>'+
+      '<td style="font-size:11px;color:var(--muted);font-family:monospace">'+n.date+'</td>'+
+      '<td><button onclick="deleteNPSEntry(''+n.branch+'',''+n.period+'')" style="padding:1px 7px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;color:var(--muted)">✕</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+renderNPSHistory();
 </script>
 </body>
 </html>
