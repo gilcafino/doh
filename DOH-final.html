@@ -3248,7 +3248,7 @@ async function syncFromSheet(silent){
     await syncNPSFromSheet();
   }catch(e){console.error('[Sync]',e);if(!silent)showBadge('err','Sync failed: '+e.message);}
 }
-setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=8&&h<13)syncFromSheet(true);},15*60*1000);},3000);
+setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=7&&h<22)syncFromSheet(true);},10*60*1000);},3000);
 
 function toggleNPSForm(){
   const f=document.getElementById('nps-form');
@@ -3323,6 +3323,7 @@ function renderNPSHistory(){
 renderNPSHistory();
 
 async function syncNPSFromSheet(){
+  var NPS_WEBHOOK='https://script.google.com/macros/s/AKfycbzzI3B7GR1HWKQyb59KBxDnbxT0VArEJXdQPas6plLj4quzYPOBXpTjLsW-KWVlJz7l/exec';
   try{
     var res=await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRBNTHA0kdTGje0azdALpTYE0DaCYHaPkBBMZJXawPDvi8hpgMDgTE_IUU5uyddqOGdit7mZre5yw6K/pub?gid=1249699398&single=true&output=csv&t='+Date.now());
     if(!res.ok)return;
