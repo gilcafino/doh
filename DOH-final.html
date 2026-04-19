@@ -3284,6 +3284,7 @@ function renderPCF(){
 
 async function syncFromSheet(silent){
   var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vRBNTHA0kdTGje0azdALpTYE0DaCYHaPkBBMZJXawPDvi8hpgMDgTE_IUU5uyddqOGdit7mZre5yw6K/pub?gid=0&single=true&output=csv';
+  var LAST_PRELOADED='2026-04-19';
   function showBadge(s,m){var b=document.getElementById('_sb');if(!b){b=document.createElement('div');b.id='_sb';b.style.cssText='position:fixed;bottom:16px;right:16px;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .5s;font-family:-apple-system,sans-serif;';document.body.appendChild(b);}b.style.opacity='1';b.style.background=s==='ok'?'#30D158':s==='err'?'#FF3B30':'#0A84DA';b.style.color='#fff';b.textContent=m;if(s!=='syncing')setTimeout(function(){b.style.opacity='0';},4000);}
   if(!silent)showBadge('syncing','Syncing...');
   try{
@@ -3291,14 +3292,10 @@ async function syncFromSheet(silent){
     var proxies=['https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
     var fetched=false;
     for(var pi=0;pi<proxies.length;pi++){
-      try{
-        var purl=proxies[pi]+encodeURIComponent(CSV+'&t='+Date.now());
-        res=await fetch(purl);
-        if(res.ok){fetched=true;break;}
-      }catch(pe){}
+      try{var purl=proxies[pi]+encodeURIComponent(CSV+'&t='+Date.now());res=await fetch(purl);if(res.ok){fetched=true;break;}}catch(pe){}
     }
     if(!fetched){res=await fetch(CSV+'&t='+Date.now());}
-    if(!res||!res.ok)throw new Error('HTTP '+(res?res.status:'no response'));
+    if(!res||!res.ok)throw new Error('HTTP '+(res?res.status:'none'));
     var txt=await res.text();
     var lines=txt.trim().split('\n').filter(function(l){return l.trim();});
     if(lines.length<2){if(!silent)showBadge('ok','Up to date');return;}
@@ -3312,25 +3309,12 @@ async function syncFromSheet(silent){
       var bc=get('branchCode');if(!bc)continue;
       var rd=get('reportDate');var ed=today;
       if(rd){var dd=new Date(rd);if(!isNaN(dd)){ed=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');}}
-      // Only add if not already in preloaded data (preloaded is source of truth)
-      var exists=false;for(var j=0;j<submissions.length;j++){if(submissions[j].branch===bc&&submissions[j].date===ed){exists=true;break;}}
-      var inPreload=_preloaded.some(function(p){return p.branch===bc&&p.date===ed;});
-      if(!exists&&!inPreload){
-        submissions.push({
-          branch:bc,date:ed,
-          mod:get('mod')||'--',
-          nsales:gn('nsales'),tsle:gn('tsle'),
-          tc:parseInt((get('tc')||'0').replace(/,/g,''))||0,
-          ac:get('ac')||'--',
-          lc:parseFloat((get('lc')||'0').replace(/%/g,''))||0,
-          food:parseFloat((get('fcpcActual')||'0').replace(/%/g,''))||0,
-          dthru:gn('dthru'),grab:gn('grab'),fpanda:gn('fpanda'),
-          jbdel:gn('jbDel'),jkp:gn('jkp'),bos:gn('bos'),
-          lpg:get('lpg')||'--',kwh:(get('kwh')||'').replace(/,/g,'')||'--',
-          watermain:(get('waterMain')||'').replace(/,/g,'')||'--',
-          watersub:get('waterSub')||'--',
-          discpct:'--',fas:'',emd:0,sec:0,ts:Date.now()
-        });
+      // ONLY add entries for dates AFTER the last preloaded date
+      if(ed<=LAST_PRELOADED)continue;
+      var exists=false;
+      for(var j=0;j<submissions.length;j++){if(submissions[j].branch===bc&&submissions[j].date===ed){exists=true;break;}}
+      if(!exists&&gn('nsales')>0){
+        submissions.push({branch:bc,date:ed,mod:get('mod')||'--',nsales:gn('nsales'),tsle:gn('tsle'),tc:parseInt((get('tc')||'0').replace(/,/g,''))||0,ac:get('ac')||'--',lc:parseFloat((get('lc')||'0').replace(/%/g,''))||0,food:parseFloat((get('fcpcActual')||'0').replace(/%/g,''))||0,dthru:gn('dthru'),grab:gn('grab'),fpanda:gn('fpanda'),jbdel:gn('jbDel'),jkp:gn('jkp'),bos:gn('bos'),lpg:get('lpg')||'--',kwh:(get('kwh')||'').replace(/,/g,'')||'--',watermain:(get('waterMain')||'').replace(/,/g,'')||'--',watersub:get('waterSub')||'--',discpct:'--',fas:'',emd:0,sec:0,ts:Date.now()});
         added++;
       }
     }
@@ -3339,79 +3323,6 @@ async function syncFromSheet(silent){
     await syncNPSFromSheet();
   }catch(e){console.log('[Sync] fetch unavailable - using cached data');if(!silent)showBadge('ok','Using cached data');}
 }
-setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=7&&h<22)syncFromSheet(true);},10*60*1000);},3000);
-
-function toggleNPSForm(){
-  const f=document.getElementById('nps-form');
-  const btn=document.getElementById('nps-form-btn');
-  const show=f.style.display==='none';
-  f.style.display=show?'block':'none';
-  btn.textContent=show?'✕ Cancel':'+ Add Entry';
-  if(show){
-    document.getElementById('nps-period').value='Apr 2026';
-    document.getElementById('nps-status').textContent='';
-  }
-}
-
-function saveNPSEntry(){
-  const branch=document.getElementById('nps-branch').value;
-  const period=document.getElementById('nps-period').value.trim();
-  const nps=parseFloat(document.getElementById('nps-score').value);
-  const osat=parseFloat(document.getElementById('nps-osat').value);
-  const ltret=parseFloat(document.getElementById('nps-ltret').value);
-  const resp=parseInt(document.getElementById('nps-resp').value)||0;
-  const comp=parseInt(document.getElementById('nps-comp').value)||0;
-  const nft=parseFloat(document.getElementById('nps-nft').value)||0;
-  const status=document.getElementById('nps-status');
-  if(!branch||!period||isNaN(nps)||isNaN(osat)){
-    status.style.color='var(--red)';
-    status.textContent='Fill in Branch, Period, NPS and OSAT at minimum.';
-    return;
-  }
-  // Remove existing entry for same branch+period
-  npsManual=npsManual.filter(function(n){return !(n.branch===branch&&n.period===period);});
-  npsManual.push({branch,period,date:today,nps,osat,ltret:isNaN(ltret)?null:ltret,respondents:resp,complaints:comp,nft_pct:nft});
-  try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
-  status.style.color='var(--green)';
-  status.textContent='✓ Saved — '+branch+' '+period;
-  renderOthersTable();
-  renderNPSHistory();
-  // Clear form
-  ['nps-branch','nps-score','nps-osat','nps-ltret','nps-resp','nps-comp','nps-nft'].forEach(function(id){document.getElementById(id).value='';});
-}
-
-function deleteNPSEntry(branch,period){
-  if(!confirm('Delete NPS entry for '+branch+' '+period+'?'))return;
-  npsManual=npsManual.filter(function(n){return !(n.branch===branch&&n.period===period);});
-  try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
-  renderOthersTable();
-  renderNPSHistory();
-}
-
-function renderNPSHistory(){
-  const tbody=document.getElementById('nps-history-tbody');
-  if(!tbody)return;
-  const sorted=[...npsManual].sort(function(a,b){return b.date.localeCompare(a.date)||a.branch.localeCompare(b.branch);});
-  if(sorted.length===0){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No NPS entries yet.</td></tr>';return;}
-  tbody.innerHTML=sorted.map(function(n){
-    const b=BRANCHES.find(function(x){return x.code===n.branch;})||{name:n.branch};
-    const npsBr=n.nps<75;const osatBr=n.osat<4.0;
-    return '<tr>'+
-      '<td><span class="b-code">'+n.branch+'</span><span style="font-size:13px;font-weight:600">'+b.name+'</span></td>'+
-      '<td style="font-size:12px;color:var(--muted)">'+n.period+'</td>'+
-      '<td style="text-align:center"><span class="kv '+(npsBr?'br':'ok')+'">'+n.nps+'</span></td>'+
-      '<td style="text-align:center"><span class="kv '+(osatBr?'br':'ok')+'">'+n.osat+'</span></td>'+
-      '<td style="text-align:center"><span class="kv '+(n.ltret&&n.ltret<4.0?'br':'ok')+'">'+(n.ltret||'—')+'</span></td>'+
-      '<td style="text-align:center">'+( n.respondents||'—')+'</td>'+
-      '<td style="text-align:center"><span class="kv '+(n.complaints>10?'br':n.complaints>5?'wa':'ok')+'">'+n.complaints+'</span></td>'+
-      '<td style="text-align:center"><span class="kv '+(n.nft_pct>3?'br':n.nft_pct>1.5?'wa':'ok')+'">'+n.nft_pct+'%</span></td>'+
-      '<td style="font-size:11px;color:var(--muted);font-family:monospace">'+n.date+'</td>'+
-      '<td><button onclick="deleteNPSEntry(\"'+n.branch+'\",\"'+n.period+'\")" style="padding:1px 7px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;color:var(--muted)">✕</button></td>'+
-    '</tr>';
-  }).join('');
-}
-
-renderNPSHistory();
 
 async function syncNPSFromSheet(){
   var NPS_WEBHOOK='https://script.google.com/macros/s/AKfycbzzI3B7GR1HWKQyb59KBxDnbxT0VArEJXdQPas6plLj4quzYPOBXpTjLsW-KWVlJz7l/exec';
