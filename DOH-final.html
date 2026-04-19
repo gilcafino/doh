@@ -1922,6 +1922,7 @@ function generateAnalysis(){
     const rankBadge=(i)=>`<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0;${i===0?'background:var(--green);color:#fff;':i===1?'background:var(--green-s);color:var(--green);border:1px solid var(--green-b);':i===2?'background:var(--amber-s);color:var(--amber);border:1px solid var(--amber-b);':'background:var(--gray-s);color:var(--muted);border:1px solid var(--border);'}">${i+1}</span>`;
     const rankRow=(badge,name,val,cl,extra)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:${extra?'var(--red-s)':'#fff'};">${badge}<span style="font-weight:600;font-size:13px;min-width:100px">${name}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${cl};margin-left:auto;">${val}</span>${extra?`<span style="font-size:10px;color:var(--red);margin-left:6px">${extra}</span>`:''}</div>`;
 
+    // ── SECTION 1: Sales Performance (full width) ──
     // RANKING 1: Sales (best growth → worst)
     const allSalesRanked=BRANCHES.map(b=>{
       const s=salesAnalysis.find(x=>x.name===b.name);
@@ -1940,21 +1941,104 @@ function generateAnalysis(){
     });
     html+=`</div></div>`;
 
-    // RANKING 2: NPS/OSAT — uses latest manual NPS entry per branch (MTD from Qualtrics)
-    const allNpsRanked=BRANCHES.map(b=>{
-      const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
-      const latest=entries[0]||null;
-      const nps=latest?latest.nps:null;
-      const avgOsat=latest?String(latest.osat):null;
-      const count=latest?latest.respondents:0;
-      return{name:b.name,nps,avgOsat,count};
+    
+    // ── SECTION 2: Transaction Count + All AC Rankings (same row grid) ──
+    html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Transaction & Average Check Rankings</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">`;
+    // RANKING 4: Transaction Count (highest to lowest)
+    const tcRanked=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      return{name:b?b.name:s.branch,tc:s.tc||0,noData:!s.tc};
+    }).sort((a,b)=>b.tc-a.tc);
+
+    html+=`<div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Transaction Count</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    tcRanked.forEach((s,i)=>{
+      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
+      const cl=s.noData?'var(--muted)':'var(--text)';
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+    
+    // RANKING 5: Average Check (highest to lowest)
+    const acRanked=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const ac=s.tc>0?Math.round(s.nsales/s.tc):0;
+      return{name:b?b.name:s.branch,ac,noData:!ac};
+    }).sort((a,b)=>b.ac-a.ac);
+
+    html+=`<div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Average Check</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    acRanked.forEach((s,i)=>{
+      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
+      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+    
+    // ── RANKING 6: NPS (best → worst from npsManual) ──
+    const npsRanked=BRANCHES.map(b=>{
+      const e=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date))[0]||null;
+      return{name:b.name,nps:e?e.nps:null,osat:e?e.osat:null,period:e?e.period:'—'};
     }).sort((a,b)=>{
       if(a.nps!==null&&b.nps!==null)return b.nps-a.nps;
-      if(a.nps!==null)return -1;
-      if(b.nps!==null)return 1;
-      return 0;
+      if(a.nps!==null)return -1;if(b.nps!==null)return 1;return 0;
     });
-// RANKING 3: 5 separate mini-rankings (Cost Control)
+    html+=`<div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">NPS Score <span style="font-weight:400;opacity:.6">(target ≥75)</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    npsRanked.forEach((b,i)=>{
+      const val=b.nps!==null?`NPS ${b.nps}${b.osat?' · OSAT '+b.osat:''}`:' No data';
+      const cl=b.nps===null?'var(--muted)':b.nps>=75?'var(--green)':b.nps>=60?'var(--amber)':'var(--red)';
+      const flag=b.nps!==null&&b.nps<75?'BELOW TARGET':'';
+      html+=rankRow(rankBadge(i),b.name,val,cl,flag);
+    });
+    html+=`</div></div>`;
+
+    // ── RANKING 7: AC per Channel ──
+    const chNames=['DThru','Grab','FPanda','JB Del','JKP'];
+    const chKeys=['dthru','grab','fpanda','jbdel','jkp'];
+    const chTcKeys=['dthruTc','grabTc','fpandaTc','jbdelTc','jkpTc'];
+    chNames.forEach((chName,ci)=>{
+      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
+      const chRanked=activeSubs.map(s=>{
+        if(!s)return{name:'?',ac:0,noData:true};
+        const b=BRANCHES.find(x=>x.code===s.branch);
+        const sales=s[chKey]||0;
+        const tc=s[tcKey]||0;
+        const ac=tc>0?Math.round(sales/tc):0;
+        return{name:b?b.name:s.branch,ac,noData:!sales&&!tc};
+      }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
+      if(chRanked.length===0)return;
+      html+=`<div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · ${chName}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+      chRanked.forEach((s,i)=>{
+        const val='₱'+s.ac.toLocaleString();
+        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+        html+=rankRow(rankBadge(i),s.name,val,cl,'');
+      });
+      html+=`</div></div>`;
+    });
+
+    html+=`</div>`; // close grid
+  }
+
+  body.innerHTML=html;
+}
+
+// ── VOC ─
+    
+    html+=`</div>`;
+
+    // ── SECTION 3: Cost Control Rankings ──
+    html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Cost Control Rankings</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">`;
+    // RANKING 3: 5 separate mini-rankings (Cost Control)
     const _dateLbl=(()=>{
       const d=new Date(viewDate+'T00:00');
       const fmt=(opts)=>d.toLocaleDateString('en-US',opts);
@@ -1964,9 +2048,8 @@ function generateAnalysis(){
       const isToday=viewDate===today;
       return`<span style="font-size:10px;font-weight:600;color:var(--text);background:var(--gray-s);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;">${isToday?'Today · ':''}${fmt({month:'short',day:'numeric'})}</span>`;
     })();
-    html+=`<div class="analysis-section-title">Cost Control Rankings</div>`;
-    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:10px;">`;
-
+    
+    
     // 3a. Food Cost %
     const foodRanked=BRANCHES.map(b=>{
       const s=todaySubs.find(x=>x.branch===b.code);
@@ -2065,87 +2148,16 @@ function generateAnalysis(){
     html+=`</div></div>`;
 
 
-    // RANKING 4: Transaction Count (highest to lowest)
-    const tcRanked=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      return{name:b?b.name:s.branch,tc:s.tc||0,noData:!s.tc};
-    }).sort((a,b)=>b.tc-a.tc);
-
-    html+=`<div style="break-inside:avoid;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Transaction Count</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    tcRanked.forEach((s,i)=>{
-      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
-      const cl=s.noData?'var(--muted)':'var(--text)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
-
-    // RANKING 5: Average Check (highest to lowest)
-    const acRanked=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const ac=s.tc>0?Math.round(s.nsales/s.tc):0;
-      return{name:b?b.name:s.branch,ac,noData:!ac};
-    }).sort((a,b)=>b.ac-a.ac);
-
-    html+=`<div style="break-inside:avoid;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Average Check</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    acRanked.forEach((s,i)=>{
-      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
-      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
-
     
-    // ── RANKING 6: NPS (best → worst from npsManual) ──
-    const npsRanked=BRANCHES.map(b=>{
-      const e=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date))[0]||null;
-      return{name:b.name,nps:e?e.nps:null,osat:e?e.osat:null,period:e?e.period:'—'};
-    }).sort((a,b)=>{
-      if(a.nps!==null&&b.nps!==null)return b.nps-a.nps;
-      if(a.nps!==null)return -1;if(b.nps!==null)return 1;return 0;
-    });
-    html+=`<div style="break-inside:avoid;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">NPS Score <span style="font-weight:400;opacity:.6">(target ≥75)</span></div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    npsRanked.forEach((b,i)=>{
-      const val=b.nps!==null?`NPS ${b.nps}${b.osat?' · OSAT '+b.osat:''}`:' No data';
-      const cl=b.nps===null?'var(--muted)':b.nps>=75?'var(--green)':b.nps>=60?'var(--amber)':'var(--red)';
-      const flag=b.nps!==null&&b.nps<75?'BELOW TARGET':'';
-      html+=rankRow(rankBadge(i),b.name,val,cl,flag);
-    });
-    html+=`</div></div>`;
+    html+=`</div>`;
 
-    // ── RANKING 7: AC per Channel ──
-    const chNames=['DThru','Grab','FPanda','JB Del','JKP'];
-    const chKeys=['dthru','grab','fpanda','jbdel','jkp'];
-    const chTcKeys=['dthruTc','grabTc','fpandaTc','jbdelTc','jkpTc'];
-    chNames.forEach((chName,ci)=>{
-      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
-      const chRanked=activeSubs.map(s=>{
-        if(!s)return{name:'?',ac:0,noData:true};
-        const b=BRANCHES.find(x=>x.code===s.branch);
-        const sales=s[chKey]||0;
-        const tc=s[tcKey]||0;
-        const ac=tc>0?Math.round(sales/tc):0;
-        return{name:b?b.name:s.branch,ac,noData:!sales&&!tc};
-      }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
-      if(chRanked.length===0)return;
-      html+=`<div style="break-inside:avoid;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · ${chName}</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
-      chRanked.forEach((s,i)=>{
-        const val='₱'+s.ac.toLocaleString();
-        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-        html+=rankRow(rankBadge(i),s.name,val,cl,'');
-      });
-      html+=`</div></div>`;
-    });
+    // ── SECTION 4: NPS Score (last) ──
+    html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">NPS Performance</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">`;
+    
+    html+=`</div>`;
 
-    html+=`</div>`; // close grid
-  }
+      }
 
   body.innerHTML=html;
 }
