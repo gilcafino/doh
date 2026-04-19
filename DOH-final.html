@@ -1082,22 +1082,22 @@ function getTgt(bcode,ym){
 }
 var _el=document.getElementById('_doh_data');
 var _preloaded=_el?JSON.parse(_el.textContent):[];
-// Version stamp - if preloaded has more records than stored, reset localStorage
-var _DOH_VERSION='v90-2026-04-20-final';
-var _storedVersion=localStorage.getItem('jb_version');
-if(_storedVersion!==_DOH_VERSION){
-  // New version - clear old data, use preloaded as fresh start
-  try{localStorage.removeItem('jb_sub3');localStorage.removeItem('jb_tgt3');localStorage.removeItem('jb_sheet_sync');}catch(e){}
-  localStorage.setItem('jb_version',_DOH_VERSION);
-}
+// ALWAYS start from preloaded - it is the single source of truth for Apr 1-19
+// Only localStorage entries for dates AFTER preloaded range are kept
+var _CUTOFF='2026-04-19';
 var _stored=JSON.parse(localStorage.getItem('jb_sub3')||'[]');
+// Only keep stored entries that are strictly AFTER the cutoff date
+var _newEntries=_stored.filter(function(s){return s.date>_CUTOFF;});
+// Always start fresh from preloaded, then add new entries
 var _merged=_preloaded.slice();
-_stored.forEach(function(_sr){
-  var _inPreload=_preloaded.some(function(p){return p.branch===_sr.branch&&p.date===_sr.date;});
-  if(!_inPreload)_merged.push(_sr);
+_newEntries.forEach(function(_sr){
+  if(!_merged.some(function(p){return p.branch===_sr.branch&&p.date===_sr.date;})){
+    _merged.push(_sr);
+  }
 });
 let submissions=_merged;
-try{localStorage.setItem('jb_sub3',JSON.stringify(submissions));}catch(e){}
+// Save only the new entries (not preloaded) to localStorage
+try{localStorage.setItem('jb_sub3',JSON.stringify(_newEntries));}catch(e){}
 let vocEntries=JSON.parse(localStorage.getItem('jb_voc_all')||'[]');
 let vocData=vocEntries;
 // Manual NPS entries from Qualtrics screenshots
