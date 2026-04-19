@@ -475,46 +475,7 @@ select.trk-inp{cursor:pointer;}
             </table>
           </div>
   
-      <!-- MANUAL NPS ENTRY -->
-      <div class="card" style="margin-top:14px;">
-        <div class="card-hd">
-          <span class="hd-title">Update NPS / OSAT</span>
-          <button class="gen-btn" onclick="toggleNPSForm()" id="nps-form-btn">+ Add Entry</button>
-        </div>
-        <div id="nps-form" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border);">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px;">
-            <select id="nps-branch" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);">
-              <option value="">Branch</option>
-              <option value="JB3353">JB3353 Gil Fernando</option>
-              <option value="JB0087">JB0087 Marikina Bayan</option>
-              <option value="JB3595">JB3595 Ejercito</option>
-              <option value="JB3702">JB3702 Marilaque</option>
-              <option value="JB3753">JB3753 Highway 2000</option>
-            </select>
-            <input type="text" id="nps-period" placeholder="Period (e.g. Apr 2026)" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-score" placeholder="NPS Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-osat" placeholder="OSAT Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-ltret" placeholder="LtRet Score" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-resp" placeholder="Respondents" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-comp" placeholder="Complaints" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-            <input type="number" id="nps-nft" placeholder="NFT %" step="0.1" style="padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;">
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button onclick="saveNPSEntry()" style="padding:6px 18px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Save</button>
-            <button onclick="toggleNPSForm()" style="padding:6px 14px;background:var(--gray-s);border:1px solid var(--border);border-radius:7px;font-size:13px;cursor:pointer;">Cancel</button>
-          </div>
-          <div id="nps-status" style="font-size:12px;margin-top:6px;color:var(--green);"></div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="tbl">
-            <thead><tr>
-              <th>Branch</th><th>Period</th><th>NPS</th><th>OSAT</th><th>LtRet</th>
-              <th>Respondents</th><th>Complaints</th><th>NFT %</th><th>Date Updated</th><th></th>
-            </tr></thead>
-            <tbody id="nps-history-tbody"></tbody>
-          </table>
-        </div>
-      </div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted);" id="nps-sync-status">NPS syncing from Google Sheets...</div>
       </div>
         <div class="card" id="voc-panel">
           <div class="card-hd"><span class="hd-title">VOC Feed</span><span id="voc-count" style="font-size:12px;color:var(--muted)"></span></div>
@@ -3284,6 +3245,7 @@ async function syncFromSheet(silent){
     }
     if(added>0){try{localStorage.setItem('jb_sub3',JSON.stringify(submissions));}catch(e){}renderAll();}
     if(!silent)showBadge('ok',added>0?'+'+added+' loaded':'Up to date');
+    await syncNPSFromSheet();
   }catch(e){console.error('[Sync]',e);if(!silent)showBadge('err','Sync failed: '+e.message);}
 }
 setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=8&&h<13)syncFromSheet(true);},15*60*1000);},3000);
@@ -3359,6 +3321,33 @@ function renderNPSHistory(){
 }
 
 renderNPSHistory();
+
+async function syncNPSFromSheet(){
+  try{
+    var res=await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRBNTHA0kdTGje0azdALpTYE0DaCYHaPkBBMZJXawPDvi8hpgMDgTE_IUU5uyddqOGdit7mZre5yw6K/pub?gid=1249699398&single=true&output=csv&t='+Date.now());
+    if(!res.ok)return;
+    var txt=await res.text();
+    var lines=txt.trim().split('\n').filter(function(l){return l.trim();});
+    if(lines.length<2)return;
+    function parseCSV2(line){var r=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){r.push(cur.trim());cur='';}else{cur+=c;}}r.push(cur.trim());return r;}
+    var hdrs=parseCSV2(lines[0]).map(function(h){return h.trim();});
+    var entries=[];
+    for(var i=1;i<lines.length;i++){
+      var row=parseCSV2(lines[i]);
+      function g2(h){var idx=hdrs.indexOf(h);return idx>-1?(row[idx]||'').trim():'';}
+      var bc=g2('branch');if(!bc)continue;
+      entries.push({branch:bc,period:g2('period'),date:g2('date')||today,nps:parseFloat(g2('nps'))||0,osat:parseFloat(g2('osat'))||0,ltret:parseFloat(g2('ltret'))||null,respondents:parseInt(g2('respondents'))||0,complaints:parseInt(g2('complaints'))||0,nft_pct:parseFloat(g2('nft_pct'))||0});
+    }
+    if(entries.length>0){
+      npsManual=entries;
+      try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
+      renderOthersTable();
+      if(typeof renderNPSHistory==='function')renderNPSHistory();
+      var el=document.getElementById('nps-sync-status');
+      if(el)el.textContent='NPS last synced: '+new Date().toLocaleTimeString('en-PH');
+    }
+  }catch(e){console.error('[NPS Sync]',e);}
+}
 </script>
 </body>
 </html>
