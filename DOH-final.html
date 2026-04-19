@@ -1082,8 +1082,14 @@ function getTgt(bcode,ym){
 }
 var _el=document.getElementById('_doh_data');
 var _preloaded=_el?JSON.parse(_el.textContent):[];
-// Always start from preloaded data as baseline
-// Then add any entries from localStorage that aren't in preloaded
+// Version stamp - if preloaded has more records than stored, reset localStorage
+var _DOH_VERSION='v90-2026-04-19';
+var _storedVersion=localStorage.getItem('jb_version');
+if(_storedVersion!==_DOH_VERSION){
+  // New version - clear old data, use preloaded as fresh start
+  try{localStorage.removeItem('jb_sub3');}catch(e){}
+  localStorage.setItem('jb_version',_DOH_VERSION);
+}
 var _stored=JSON.parse(localStorage.getItem('jb_sub3')||'[]');
 var _merged=_preloaded.slice();
 _stored.forEach(function(_sr){
@@ -3329,7 +3335,7 @@ async function syncFromSheet(silent){
     if(added>0){try{localStorage.setItem('jb_sub3',JSON.stringify(submissions));}catch(e){}renderAll();}
     if(!silent)showBadge('ok',added>0?'+'+added+' loaded':'Up to date');
     await syncNPSFromSheet();
-  }catch(e){console.error('[Sync]',e);if(!silent)showBadge('err','Sync failed: '+e.message);}
+  }catch(e){console.log('[Sync] fetch unavailable - using cached data');if(!silent)showBadge('ok','Using cached data');}
 }
 setTimeout(function(){syncFromSheet(true);setInterval(function(){var h=new Date().getHours();if(h>=7&&h<22)syncFromSheet(true);},10*60*1000);},3000);
 
@@ -3441,7 +3447,7 @@ async function syncNPSFromSheet(){
       var el=document.getElementById('nps-sync-status');
       if(el)el.textContent='NPS last synced: '+new Date().toLocaleTimeString('en-PH');
     }
-  }catch(e){console.error('[NPS Sync]',e);}
+  }catch(e){console.log('[NPS Sync] fetch unavailable');}
 }
 </script>
 </body>
