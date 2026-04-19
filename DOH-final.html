@@ -2098,6 +2098,52 @@ function generateAnalysis(){
     });
     html+=`</div></div>`;
 
+    
+    // ── RANKING 6: NPS (best → worst from npsManual) ──
+    const npsRanked=BRANCHES.map(b=>{
+      const e=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date))[0]||null;
+      return{name:b.name,nps:e?e.nps:null,osat:e?e.osat:null,period:e?e.period:'—'};
+    }).sort((a,b)=>{
+      if(a.nps!==null&&b.nps!==null)return b.nps-a.nps;
+      if(a.nps!==null)return -1;if(b.nps!==null)return 1;return 0;
+    });
+    html+=`<div style="break-inside:avoid;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">NPS Score <span style="font-weight:400;opacity:.6">(target ≥75)</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    npsRanked.forEach((b,i)=>{
+      const val=b.nps!==null?`NPS ${b.nps}${b.osat?' · OSAT '+b.osat:''}`:' No data';
+      const cl=b.nps===null?'var(--muted)':b.nps>=75?'var(--green)':b.nps>=60?'var(--amber)':'var(--red)';
+      const flag=b.nps!==null&&b.nps<75?'BELOW TARGET':'';
+      html+=rankRow(rankBadge(i),b.name,val,cl,flag);
+    });
+    html+=`</div></div>`;
+
+    // ── RANKING 7: AC per Channel ──
+    const chNames=['DThru','Grab','FPanda','JB Del','JKP'];
+    const chKeys=['dthru','grab','fpanda','jbdel','jkp'];
+    const chTcKeys=['dthruTc','grabTc','fpandaTc','jbdelTc','jkpTc'];
+    chNames.forEach((chName,ci)=>{
+      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
+      const chRanked=activeSubs.map(s=>{
+        if(!s)return{name:'?',ac:0,noData:true};
+        const b=BRANCHES.find(x=>x.code===s.branch);
+        const sales=s[chKey]||0;
+        const tc=s[tcKey]||0;
+        const ac=tc>0?Math.round(sales/tc):0;
+        return{name:b?b.name:s.branch,ac,noData:!sales&&!tc};
+      }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
+      if(chRanked.length===0)return;
+      html+=`<div style="break-inside:avoid;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · ${chName}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+      chRanked.forEach((s,i)=>{
+        const val='₱'+s.ac.toLocaleString();
+        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+        html+=rankRow(rankBadge(i),s.name,val,cl,'');
+      });
+      html+=`</div></div>`;
+    });
+
     html+=`</div>`; // close grid
   }
 
