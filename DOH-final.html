@@ -1110,7 +1110,12 @@ _npsStored.forEach(function(s){
 });
 let npsManual=_npsMerged;
 try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
-let viewDate=today;
+let viewDate=(()=>{
+  // Default to most recent date with data, or today
+  const dates=submissions.map(function(s){return s.date;}).sort();
+  const latest=dates[dates.length-1]||today;
+  return latest>today?today:latest;
+})();
 
 // branch keyword map for Qualtrics auto-detect
 const BRANCH_KW=[
@@ -1775,6 +1780,22 @@ function setAnalysisMode(mode){
   const title=document.getElementById('analysis-title');
   if(title)title.textContent=mode==='mtd'?'MTD Performance Report':'Daily Performance Report';
 }
+
+function rankBadge(i){
+  const colors=['#FFD700','#C0C0C0','#CD7F32'];
+  const color=i<3?colors[i]:'var(--muted)';
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:'+color+';color:'+(i<3?'#1C1C1E':'#fff')+';font-size:11px;font-weight:700;flex-shrink:0;">'+(i+1)+'</span>';
+}
+function rankRow(badge,name,val,color,flag){
+  var r='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">';
+  r+=badge;
+  r+='<span style="flex:1;font-size:13px;font-weight:500;">'+name+'</span>';
+  r+='<span style="font-family:monospace;font-size:12px;color:'+color+';">'+val+'</span>';
+  if(flag)r+='<span style="font-size:10px;font-weight:700;color:var(--red);padding:2px 6px;border-radius:4px;background:var(--red-s);">'+flag+'</span>';
+  r+='</div>';
+  return r;
+}
+
 function generateAnalysis(){
   const ym=viewDate.substring(0,7);
   // MTD mode: group by branch, average the daily values
