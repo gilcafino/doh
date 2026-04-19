@@ -3353,7 +3353,7 @@ function renderNPSHistory(){
       '<td style="text-align:center"><span class="kv '+(n.complaints>10?'br':n.complaints>5?'wa':'ok')+'">'+n.complaints+'</span></td>'+
       '<td style="text-align:center"><span class="kv '+(n.nft_pct>3?'br':n.nft_pct>1.5?'wa':'ok')+'">'+n.nft_pct+'%</span></td>'+
       '<td style="font-size:11px;color:var(--muted);font-family:monospace">'+n.date+'</td>'+
-      '<td><button onclick="deleteNPSEntry(''+n.branch+'',''+n.period+'')" style="padding:1px 7px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;color:var(--muted)">✕</button></td>'+
+      '<td><button onclick="deleteNPSEntry(\"'+n.branch+'\",\"'+n.period+'\")" style="padding:1px 7px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;color:var(--muted)">✕</button></td>'+
     '</tr>';
   }).join('');
 }
