@@ -3312,8 +3312,10 @@ async function syncFromSheet(silent){
       var bc=get('branchCode');if(!bc)continue;
       var rd=get('reportDate');var ed=today;
       if(rd){var dd=new Date(rd);if(!isNaN(dd)){ed=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');}}
+      // Only add if not already in preloaded data (preloaded is source of truth)
       var exists=false;for(var j=0;j<submissions.length;j++){if(submissions[j].branch===bc&&submissions[j].date===ed){exists=true;break;}}
-      if(!exists){
+      var inPreload=_preloaded.some(function(p){return p.branch===bc&&p.date===ed;});
+      if(!exists&&!inPreload){
         submissions.push({
           branch:bc,date:ed,
           mod:get('mod')||'--',
