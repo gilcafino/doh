@@ -1083,11 +1083,11 @@ function getTgt(bcode,ym){
 var _el=document.getElementById('_doh_data');
 var _preloaded=_el?JSON.parse(_el.textContent):[];
 // Version stamp - if preloaded has more records than stored, reset localStorage
-var _DOH_VERSION='v90-2026-04-19';
+var _DOH_VERSION='v90-2026-04-20-final';
 var _storedVersion=localStorage.getItem('jb_version');
 if(_storedVersion!==_DOH_VERSION){
   // New version - clear old data, use preloaded as fresh start
-  try{localStorage.removeItem('jb_sub3');}catch(e){}
+  try{localStorage.removeItem('jb_sub3');localStorage.removeItem('jb_tgt3');localStorage.removeItem('jb_sheet_sync');}catch(e){}
   localStorage.setItem('jb_version',_DOH_VERSION);
 }
 var _stored=JSON.parse(localStorage.getItem('jb_sub3')||'[]');
