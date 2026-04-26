@@ -465,38 +465,14 @@ select.trk-inp{cursor:pointer;}
         </div>
         <!-- REVIEW GRID (13 columns) -->
         <div id="qlt-grid" style="display:none;">
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;" id="qlt-review-table">
-              <thead>
-                <tr style="border-bottom:2px solid var(--border);">
-                  <th style="text-align:left;padding:5px 8px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:130px">Branch</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS Ct</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS Var</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT Ct</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">Top2Box</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT Var</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NFT</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NFT Var</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet Ct</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet</th>
-                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet Var</th>
-                </tr>
-              </thead>
-              <tbody id="qlt-rows"></tbody>
-            </table>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:12px;">
+          <div id="qlt-preview" style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;"></div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
             <button class="extract-btn" style="background:var(--blue);box-shadow:0 2px 8px rgba(0,87,217,.35);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted()">✓ Save to Dashboard</button>
             <button class="extract-btn" style="background:var(--gray-s,#F2F2F7);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste()">✕ Clear</button>
           </div>
         </div>
         <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
-        <details style="margin-top:6px;">
-          <summary style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none;">Show raw OCR text (debug)</summary>
-          <pre id="qlt-debug" style="font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></pre>
-        </details>
+        <pre id="qlt-debug" style="display:none;font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;white-space:pre-wrap;max-height:180px;overflow-y:auto;"></pre>
       </div>
 
     </div>
@@ -1068,8 +1044,8 @@ const today=new Date().toISOString().split('T')[0];
 
 // QBR branch patterns for Qualtrics OCR matching — declared early so render calls below can't crash before it's assigned
 var QBR=[
-  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fern|sumulong/i},
-  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|shoe\s*ave/i},
+  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fern/i},
+  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|bayan|shoe/i},
   {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
   {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
   {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway|hwy\s*2/i}
@@ -2050,11 +2026,7 @@ function generateAnalysis(){
     }
   }
 
-  const unresolved=vocData.filter(v=>v.type==='complaint'||v.type==='detractor');
-  if(unresolved.length>0){
-    html+=`<div class="analysis-section-title">VOC / Qualtrics</div>`;
-    html+=`<div class="analysis-flag blue" style="background:var(--blue-s);border-left-color:var(--blue);">📋 ${unresolved.length} unresolved ticket${unresolved.length>1?'s':''} — ${unresolved.slice(0,3).map(v=>(v.store||'Unknown')+' ('+v.type+')').join(', ')}${unresolved.length>3?' + more':''}</div>`;
-  }
+
 
   // ── BRANCH RANKINGS ──
   if(todaySubs.length>0){
@@ -2125,170 +2097,55 @@ function generateAnalysis(){
     }
 
 
-    // ── SECTION 2: Transaction Count + All AC Rankings (same row grid) ──
+    // ── SECTION 2: Transaction & Average Check Rankings ──
+    // Layout: Row 1 = all TC columns | Row 2 = all AC columns
+    // Channels: Net Sales · Reg NSales · DThru · 2nd TC · Total Delivery
+    // BOS removed per Gil's spec
     html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Transaction & Average Check Rankings</div>`;
-    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">`;
-    // RANKING 4: Transaction Count (highest to lowest)
-    const tcRanked=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      return{name:b?b.name:s.branch,tc:s.tc||0,noData:!s.tc};
-    }).sort((a,b)=>b.tc-a.tc);
 
-    html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Net Sales TC</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    tcRanked.forEach((s,i)=>{
-      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
-      const cl=s.noData?'var(--muted)':'var(--text)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
+    // ── Build all ranked arrays ──
+    const r_nsTc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);return{name:b?b.name:s.branch,v:s.tc||0,noData:!s.tc};}).sort((a,b)=>b.v-a.v);
+    const r_nsAc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const ac=s.tc>0?Math.round(s.nsales/s.tc):0;return{name:b?b.name:s.branch,v:ac,noData:!ac};}).sort((a,b)=>b.v-a.v);
+    const r_regTc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const tc=Number(s.regTc)||0;return{name:b?b.name:s.branch,v:tc,noData:!tc};}).sort((a,b)=>b.v-a.v);
+    const r_regAc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const tc=Number(s.regTc)||0;const ac=tc>0?Math.round((Number(s.regSales)||0)/tc):0;return{name:b?b.name:s.branch,v:ac,noData:!ac};}).sort((a,b)=>b.v-a.v);
+    const r_dtTc=activeSubs.filter(s=>s.dthruTc||s.dthru).map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);return{name:b?b.name:s.branch,v:s.dthruTc||0,noData:!s.dthruTc};}).sort((a,b)=>b.v-a.v);
+    const r_dtAc=activeSubs.filter(s=>s.dthruTc||s.dthru).map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const ac=s.dthruTc>0?Math.round(s.dthru/s.dthruTc):0;return{name:b?b.name:s.branch,v:ac,noData:!ac};}).sort((a,b)=>b.v-a.v);
+    const r_secTc=activeSubs.filter(s=>s.secTc||s.sec).map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);return{name:b?b.name:s.branch,v:s.secTc||0,noData:!s.secTc};}).sort((a,b)=>b.v-a.v);
+    const r_secAc=activeSubs.filter(s=>s.secTc||s.sec).map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const ac=s.secTc>0?Math.round((s.sec||0)/s.secTc):0;return{name:b?b.name:s.branch,v:ac,noData:!ac};}).sort((a,b)=>b.v-a.v);
+    const r_delTc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);return{name:b?b.name:s.branch,v:tc,noData:!tc};}).filter(x=>!x.noData).sort((a,b)=>b.v-a.v);
+    const r_delAc=activeSubs.map(s=>{const b=BRANCHES.find(x=>x.code===s.branch);const sales=(Number(s.grab)||0)+(Number(s.fpanda)||0)+(Number(s.jbdel)||0);const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);const ac=(sales>0&&tc>0)?Math.round(sales/tc):0;return{name:b?b.name:s.branch,v:ac,noData:!ac};}).filter(x=>!x.noData).sort((a,b)=>b.v-a.v);
 
-    
-    // RANKING 5: Average Check (highest to lowest)
-    const acRanked=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const ac=s.tc>0?Math.round(s.nsales/s.tc):0;
-      return{name:b?b.name:s.branch,ac,noData:!ac};
-    }).sort((a,b)=>b.ac-a.ac);
-
-    html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Net Sales AC</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    acRanked.forEach((s,i)=>{
-      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
-      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
-
-    // ── RANKING 5a: Total Reg NSales TC (highest → lowest) — TC before AC per Gil's spec ──
-    const gridRegTc=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const tc=Number(s.regTc)||0;
-      return{name:b?b.name:s.branch,tc,noData:!tc};
-    }).sort((a,b)=>b.tc-a.tc);
-    html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Total Reg NSales TC</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    gridRegTc.forEach((s,i)=>{
-      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
-      const cl=s.noData?'var(--muted)':'var(--text)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
-
-    // ── RANKING 5b: Total Reg NSales AC (highest → lowest) ──
-    // Confirmed formula: Reg AC = Reg NSales ÷ Reg TC
-    const gridRegAc=activeSubs.map(s=>{
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const sales=Number(s.regSales)||0;
-      const tc=Number(s.regTc)||0;
-      const ac=tc>0?Math.round(sales/tc):0;
-      return{name:b?b.name:s.branch,ac,noData:!ac};
-    }).sort((a,b)=>b.ac-a.ac);
-    html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Total Reg NSales AC</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    gridRegAc.forEach((s,i)=>{
-      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
-      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-      html+=rankRow(rankBadge(i),s.name,val,cl,'');
-    });
-    html+=`</div></div>`;
-
-
-    // ── RANKING 6: NPS (best → worst from npsManual) ──
-    
-    // ── RANKING 7: TC per Channel (DThru + BOS) — TC always shown before AC per Gil's spec ──
-    // Confirmed formula: rank by raw transaction count per channel, highest first.
-    const chNames=['DThru','BOS'];
-    const chKeys=['dthru','bos'];
-    const chTcKeys=['dthruTc','bosTc'];
-    chNames.forEach((chName,ci)=>{
-      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
-      const chRanked=activeSubs.map(s=>{
-        if(!s)return{name:'?',tc:0,noData:true};
-        const b=BRANCHES.find(x=>x.code===s.branch);
-        const sales=s[chKey]||0;
-        const tc=s[tcKey]||0;
-        return{name:b?b.name:s.branch,tc,noData:!sales&&!tc};
-      }).filter(x=>!x.noData).sort((a,b)=>b.tc-a.tc);
-      if(chRanked.length===0)return;
-      html+=`<div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">TC · ${chName}</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
-      chRanked.forEach((s,i)=>{
-        const val=s.tc>0?s.tc.toLocaleString()+' txns':'No TC';
-        const cl=s.tc>0?'var(--text)':'var(--muted)';
-        html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    // ── Helper: render one ranking column ──
+    const mkCol=(label,arr,isMoney)=>{
+      if(!arr.length)return'';
+      let s=`<div><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">${label}</div><div style="display:flex;flex-direction:column;gap:4px;">`;
+      arr.forEach((r,i)=>{
+        const val=r.noData?'No data':isMoney?'₱'+r.v.toLocaleString():r.v.toLocaleString()+' txns';
+        const cl=r.noData?'var(--muted)':isMoney?(r.v>=400?'var(--green)':r.v>=300?'var(--text)':'var(--amber)'):'var(--text)';
+        s+=rankRow(rankBadge(i),r.name,val,cl,'');
       });
-      html+=`</div></div>`;
-    });
+      return s+`</div></div>`;
+    };
 
-    // ── RANKING 8: AC per Channel (DThru + BOS only — Grab/FPanda/JB Del/JKP removed per Gil's spec; delivery shown as Total Delivery below) ──
-    chNames.forEach((chName,ci)=>{
-      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
-      const chRanked=activeSubs.map(s=>{
-        if(!s)return{name:'?',ac:0,noData:true};
-        const b=BRANCHES.find(x=>x.code===s.branch);
-        const sales=s[chKey]||0;
-        const tc=s[tcKey]||0;
-        const ac=tc>0?Math.round(sales/tc):0;
-        return{name:b?b.name:s.branch,ac,noData:!sales&&!tc};
-      }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
-      if(chRanked.length===0)return;
-      html+=`<div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · ${chName}</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
-      chRanked.forEach((s,i)=>{
-        const val='₱'+s.ac.toLocaleString();
-        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-        html+=rankRow(rankBadge(i),s.name,val,cl,'');
-      });
-      html+=`</div></div>`;
-    });
+    // ── Row 1: All TC ──
+    html+=`<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:4px;margin-top:2px;">TC — Transaction Count</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px;">`;
+    html+=mkCol('Net Sales TC',r_nsTc,false);
+    html+=mkCol('Reg NSales TC',r_regTc,false);
+    if(r_dtTc.length) html+=mkCol('DThru TC',r_dtTc,false);
+    if(r_secTc.length) html+=mkCol('2nd TC',r_secTc,false);
+    if(r_delTc.length) html+=mkCol('Total Delivery TC',r_delTc,false);
+    html+=`</div>`;
 
-    // ── RANKING 9: Total Delivery TC + AC (new) ──
-    // Total Delivery Sales = Grab + FPanda + JB Del (JKP excluded per Gil's spec)
-    // Total Delivery TC    = grabTc + fpandaTc + jbdelTc
-    // Total Delivery AC    = (Grab+FPanda+JB Del) ÷ (grabTc+fpandaTc+jbdelTc)
-    const delTcRanked=activeSubs.map(s=>{
-      if(!s)return{name:'?',tc:0,noData:true};
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);
-      return{name:b?b.name:s.branch,tc,noData:!tc};
-    }).filter(x=>!x.noData).sort((a,b)=>b.tc-a.tc);
-    if(delTcRanked.length>0){
-      html+=`<div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">TC · Total Delivery</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
-      delTcRanked.forEach((s,i)=>{
-        html+=rankRow(rankBadge(i),s.name,s.tc.toLocaleString()+' txns','var(--text)','');
-      });
-      html+=`</div></div>`;
-    }
-    const delAcRanked=activeSubs.map(s=>{
-      if(!s)return{name:'?',ac:0,noData:true};
-      const b=BRANCHES.find(x=>x.code===s.branch);
-      const sales=(Number(s.grab)||0)+(Number(s.fpanda)||0)+(Number(s.jbdel)||0);
-      const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);
-      const ac=(sales>0&&tc>0)?Math.round(sales/tc):0;
-      return{name:b?b.name:s.branch,ac,noData:!ac};
-    }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
-    if(delAcRanked.length>0){
-      html+=`<div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · Total Delivery</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
-      delAcRanked.forEach((s,i)=>{
-        const val='₱'+s.ac.toLocaleString();
-        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
-        html+=rankRow(rankBadge(i),s.name,val,cl,'');
-      });
-      html+=`</div></div>`;
-    }
-
-    html+=`</div>`; // close grid
+    // ── Row 2: All AC ──
+    html+=`<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--purple,#BF5AF2);margin-bottom:4px;">AC — Average Check</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px;">`;
+    html+=mkCol('Net Sales AC',r_nsAc,true);
+    html+=mkCol('Reg NSales AC',r_regAc,true);
+    if(r_dtAc.length) html+=mkCol('DThru AC',r_dtAc,true);
+    if(r_secAc.length) html+=mkCol('2nd TC AC',r_secAc,true);
+    if(r_delAc.length) html+=mkCol('Total Delivery AC',r_delAc,true);
+    html+=`</div>`;
   }
 
   html+=`</div>`;
@@ -3715,9 +3572,12 @@ function parseQltText(raw){
   var _step='init';
   try{
   _step='split'; var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
-  // Debug: show raw OCR lines in status
+  // Debug: show raw OCR lines
   var dbg=document.getElementById('qlt-debug');
-  if(dbg){dbg.textContent='OCR lines ('+lines.length+'):\n'+lines.slice(0,30).join('\n');}
+  if(dbg){
+    dbg.style.display='block';
+    dbg.textContent='── RAW OCR ('+lines.length+' lines) ──\n'+lines.join('\n');
+  }
   _step='qltData init'; qltData={};
   // Merge consecutive lines belonging to same branch
   _step='merge'; var merged=[];
@@ -3726,10 +3586,11 @@ function parseQltText(raw){
     var bc=matchBranch(lines[i]);
     var startLine=lines[i];
     // Try combining current + next line — handles OCR wrapping store names across 2 lines
+    // Use lines[i+1] as startLine (not combo) so header garbage from line i doesn't pollute numbers
     if(!bc && i+1<lines.length){
       var combo=lines[i]+' '+lines[i+1];
       var bc2=matchBranch(combo);
-      if(bc2){bc=bc2; startLine=combo; i++;}
+      if(bc2){bc=bc2; startLine=lines[i+1]; i++;}
     }
     if(bc){
       var row=startLine;
@@ -3741,36 +3602,39 @@ function parseQltText(raw){
   }
   merged.forEach(function(m){
     var bc=m.bc, row=m.row;
-    // Extract all numbers (including negatives)
-    var nums=(row.match(/-?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
-    // Remove store code numbers
-    nums=nums.filter(function(n){return![3353,3595,3702,87,3753,88,87].includes(Math.abs(n));});
+    // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
+    var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
+    // Normalize comma-formatted numbers: "1,165" → "1165"
+    dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
+    // Extract numbers including leading-dot decimals like .02
+    var nums=(dataRow.match(/-?\.?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
+    // Remove any residual store code numbers
+    nums=nums.filter(function(n){return![3353,3595,3702,87,3753,88].includes(Math.abs(n));});
     // Column layout (Qualtrics Store/Restaurant/Cafe Summary):
     // NPS Count | NPS | NPS Var | OSAT Count | OSAT Top2Box% | OSAT | OSAT Var | NFT Score | NFT Var | LtRet Count | LtRet Score | LtRet Var
-    // Identify types: large int=counts, 0-100=NPS or Top2Box, 0-5=OSAT/LtRet/NFT, small neg/pos=variance
-    var counts=[], npsScores=[], top2=[], osatScores=[], nftScores=[], variances=[];
+    var counts=[], npsScores=[], osatScores=[], nftScores=[], variances=[];
     nums.forEach(function(n){
       var abs=Math.abs(n);
-      if(n===Math.floor(n)&&n>10&&n<5000) counts.push(n);           // counts
-      else if(abs>=30&&abs<=100&&n===Math.floor(n)) npsScores.push(n); // round NPS
-      else if(abs>=30&&abs<=100) npsScores.push(n);                    // decimal NPS
-      else if(abs>=85&&abs<=100) top2.push(n);                         // OSAT Top2 Box %
-      else if(abs>=3.5&&abs<=5.5) osatScores.push(n);                  // OSAT/LtRet
-      else if(abs>=0&&abs<10&&n!==Math.floor(n)) variances.push(n);    // variances
-      else if(abs>=0&&abs<5) nftScores.push(n);                        // NFT
+      if(n===Math.floor(n)&&abs>10&&abs<5000) counts.push(n);          // response counts (large int)
+      else if(abs>=50&&abs<=100) npsScores.push(n);                     // NPS / Top2Box (50-100)
+      else if(n>0&&abs>=3.5&&abs<=5.5) osatScores.push(n);             // OSAT/LtRet — positive only (negatives are variances)
+      else if(n>0&&abs<3.5) nftScores.push(n);                         // NFT score (0-3.5, positive)
+      else if(n!==Math.floor(n)) variances.push(n);                    // decimals not caught above = variances
     });
+    // Skip rows with no meaningful data — prevents split-name lines (e.g. "Sumulong Hiway") from overwriting real data
+    if(!counts.length && !npsScores.length && !osatScores.length) return;
+    // Also skip if this branch already has better data (more values)
+    var existing=qltData[bc];
+    if(existing && existing._score >= counts.length+npsScores.length+osatScores.length) return;
+    var def=function(arr,i){return arr[i]!==undefined?arr[i]:null;};
     var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
-           npsCount:counts[0]||null, nps:npsScores[0]||null, npsVar:null,
-           osatCount:counts[1]||null, osatTop2:top2[0]||null,
-           osat:osatScores[0]||null, osatVar:null,
-           nft:nftScores[0]||null, nftVar:null,
-           ltretCount:counts[2]||null, ltret:osatScores[1]||null, ltretVar:null};
-    // Assign variances by position in variance list
-    if(variances[0]!==undefined)e.npsVar=variances[0];
-    if(variances[1]!==undefined)e.osatVar=variances[1];
-    if(variances[2]!==undefined)e.nftVar=variances[2];
-    if(variances[3]!==undefined)e.ltretVar=variances[3];
+           _score:counts.length+npsScores.length+osatScores.length,
+           npsCount:def(counts,0), nps:def(npsScores,0), npsVar:def(variances,0),
+           osatCount:def(counts,1), osatTop2:null,
+           osat:def(osatScores,0), osatVar:def(variances,1),
+           nft:def(nftScores,0), nftVar:def(variances,2),
+           ltretCount:def(counts,2), ltret:def(osatScores,1), ltretVar:def(variances,3)};
     qltData[bc]=e;
   });
   _step='check results'; if(!Object.keys(qltData).length){
@@ -3787,63 +3651,44 @@ function matchBranch(line){
 }
 
 function renderQltGrid(){
-  var tbody=document.getElementById('qlt-rows');
-  if(!tbody){return;}
-  tbody.innerHTML='';
+  // Build a compact preview of what was detected — no editable table
+  var preview=document.getElementById('qlt-preview');
+  var lines=[];
   QBR.forEach(function(b){
-    var d=qltData[b.code]||{};
-    var k=b.key;
-    var tr=document.createElement('tr');
-    tr.style.borderBottom='1px solid var(--border)';
-    tr.innerHTML=
-      '<td style="padding:4px 8px;font-size:12px;font-weight:700;white-space:nowrap;">'+b.code+'<br><span style="font-size:10px;font-weight:400;color:var(--muted);">'+b.name+'</span></td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_nct',  d.npsCount||'','','integer')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_nps',  d.nps!=null?d.nps:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_nvar', d.npsVar!=null?d.npsVar:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_oct',  d.osatCount||'','','integer')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_top2', d.osatTop2!=null?d.osatTop2:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_osat', d.osat!=null?d.osat:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_ovar', d.osatVar!=null?d.osatVar:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_nft',  d.nft!=null?d.nft:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_nftv', d.nftVar!=null?d.nftVar:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_lct',  d.ltretCount||'','','integer')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_ltr',  d.ltret!=null?d.ltret:'','step','0.1')+'</td>'+
-      '<td style="padding:3px;">'+mkInp('q_'+k+'_lvar', d.ltretVar!=null?d.ltretVar:'','step','0.1')+'</td>';
-    tbody.appendChild(tr);
+    var d=qltData[b.code];
+    if(!d)return;
+    var parts=[];
+    if(d.nps!==null)parts.push('NPS '+d.nps+(d.npsVar!==null?' ('+( d.npsVar>0?'+':'')+d.npsVar+')':''));
+    if(d.osat!==null)parts.push('OSAT '+d.osat);
+    if(d.ltret!==null)parts.push('LtRet '+d.ltret);
+    if(d.nft!==null)parts.push('NFT '+d.nft);
+    lines.push('<b>'+b.name+'</b>  '+parts.join(' · '));
   });
+  if(preview)preview.innerHTML=lines.join('<br>');
   document.getElementById('qlt-grid').style.display='block';
-  var found=Object.keys(qltData).map(function(bc){return bc.replace('JB','');}).join(', ');
-  document.getElementById('qlt-status').textContent='Detected: '+found+' — correct values if needed, then Save.';
-  document.getElementById('qlt-status').style.color='var(--blue)';
+  var foundCodes=Object.keys(qltData);
+  var found=foundCodes.map(function(bc){return bc.replace('JB','');}).join(', ');
+  var missed=QBR.filter(function(b){return foundCodes.indexOf(b.code)===-1;}).map(function(b){return b.name;}).join(', ');
+  var msg='Detected: '+found;
+  if(missed)msg+=' | Not found: '+missed;
+  document.getElementById('qlt-status').textContent=msg+' — set period then Save.';
+  document.getElementById('qlt-status').style.color=missed?'var(--amber)':'var(--blue)';
 }
-
-function mkInp(id,val,attr,attrVal){
-  var step=attr==='step'?'step="'+attrVal+'"':'';
-  return '<input class="qlt-inp" type="number" id="'+id+'" value="'+(val!==null&&val!==undefined&&val!==''?val:'')+'" '+step+' style="width:72px;text-align:center;padding:3px 4px;">';
-}
-
-function gqn(id){var el=document.getElementById(id);if(!el||el.value==='')return null;var n=parseFloat(el.value);return isNaN(n)?null:n;}
-function gqi(id){var el=document.getElementById(id);if(!el||el.value==='')return null;var n=parseInt(el.value);return isNaN(n)?null:n;}
 
 function saveQltExtracted(){
   var period=document.getElementById('qlt-period').value||'';
   var rDate=document.getElementById('qlt-date').value||today;
   if(!period){document.getElementById('qlt-status').textContent='Set the period first (e.g. Apr 2026)';return;}
   var saved=[];
-  QBR.forEach(function(b){
-    var k=b.key,bc=b.code;
-    var npsCount=gqi('q_'+k+'_nct'), nps=gqn('q_'+k+'_nps'), npsVar=gqn('q_'+k+'_nvar');
-    var osatCount=gqi('q_'+k+'_oct'), osatTop2=gqn('q_'+k+'_top2');
-    var osat=gqn('q_'+k+'_osat'), osatVar=gqn('q_'+k+'_ovar');
-    var nft=gqn('q_'+k+'_nft'), nftVar=gqn('q_'+k+'_nftv');
-    var ltretCount=gqi('q_'+k+'_lct'), ltret=gqn('q_'+k+'_ltr'), ltretVar=gqn('q_'+k+'_lvar');
-    if(nps===null&&osat===null&&ltret===null)return;
+  // Save directly from qltData — no intermediate input fields needed
+  Object.keys(qltData).forEach(function(bc){
+    var d=qltData[bc];
+    if(!d||d.nps===null&&d.osat===null&&d.ltret===null)return;
     var data={branch:bc,period:period,date:rDate,
-              npsCount:npsCount,nps:nps,npsVar:npsVar,
-              osatCount:osatCount,osatTop2:osatTop2,osat:osat,osatVar:osatVar,
-              nft:nft,nftVar:nftVar,
-              ltretCount:ltretCount,ltret:ltret,ltretVar:ltretVar};
-    // Save per-period: one record per branch per period
+              npsCount:d.npsCount,nps:d.nps,npsVar:d.npsVar,
+              osatCount:d.osatCount,osatTop2:d.osatTop2,osat:d.osat,osatVar:d.osatVar,
+              nft:d.nft,nftVar:d.nftVar,
+              ltretCount:d.ltretCount,ltret:d.ltret,ltretVar:d.ltretVar};
     var found=false;
     for(var j=0;j<npsManual.length;j++){
       if(npsManual[j].branch===bc&&npsManual[j].period===period){
@@ -3866,7 +3711,7 @@ function resetQltPaste(){
   document.getElementById('qlt-img').style.display='none';
   document.getElementById('qlt-zone-prompt').style.display='block';
   document.getElementById('qlt-grid').style.display='none';
-  document.getElementById('qlt-rows').innerHTML='';
+  document.getElementById('qlt-preview').innerHTML='';
   document.getElementById('qlt-ocr-bar').style.display='none';
   document.getElementById('qlt-status').textContent='';
   document.getElementById('qlt-status').style.color='';
