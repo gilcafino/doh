@@ -294,7 +294,7 @@ select.trk-inp{cursor:pointer;}
     <div class="tab-seg" id="metric-seg">
       <button class="tab-btn active" onclick="switchMetric('sales',this)">Sales</button>
       <button class="tab-btn" onclick="switchMetric('costs',this)">Costs</button>
-      <button class="tab-btn" onclick="switchMetric('nps',this)">NPS / OSAT / VOC</button>
+      <button class="tab-btn" onclick="switchMetric('nps',this)">NPS / OSAT</button>
     </div>
   </div>
 
@@ -394,30 +394,68 @@ select.trk-inp{cursor:pointer;}
 
     <!-- DAILY · NPS -->
     <div id="pane-daily-nps" class="tab-combo" style="display:none">
-      <!-- QUALTRICS SCREENSHOT PASTE -->
-      <div class="qlt-card">
+
+      <!-- CARD 1: QUALTRICS MTD TABLE -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="hd-title">Qualtrics MTD Summary</span>
+          <span id="qlt-period-display" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl" id="qlt-main-table">
+            <thead>
+              <tr style="background:var(--bg);">
+                <th style="min-width:170px;text-align:left">Store</th>
+                <th style="text-align:right;white-space:nowrap">NPS Count</th>
+                <th style="text-align:right">NPS</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px">NPS Var<br>vs Prior</th>
+                <th style="text-align:right;white-space:nowrap">OSAT Count</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px">OSAT<br>Top 2 Box</th>
+                <th style="text-align:right">OSAT</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px">OSAT Var<br>vs Prior</th>
+                <th style="text-align:right;white-space:nowrap">NFT Score</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px">NFT Var<br>vs Prior</th>
+                <th style="text-align:right;white-space:nowrap">LtRet Count</th>
+                <th style="text-align:right;white-space:nowrap">LtRet Score</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px">LtRet Var<br>vs Prior</th>
+              </tr>
+            </thead>
+            <tbody id="others-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARD 2: RANKINGS -->
+      <div class="card" style="margin-top:14px;">
+        <div class="card-hd">
+          <span class="hd-title">Store Rankings</span>
+          <span style="font-size:12px;color:var(--muted)">Based on latest Qualtrics data · lower NFT = better</span>
+        </div>
+        <div id="nps-rankings-body" style="padding:10px 14px;"></div>
+      </div>
+
+      <!-- CARD 3: PASTE QUALTRICS SCREENSHOT (bottom) -->
+      <div class="qlt-card" style="margin-top:14px;">
         <div class="qlt-header">
-          <span class="qlt-title">📊 Qualtrics Report — Paste Screenshot</span>
+          <span class="qlt-title">📋 Paste Qualtrics Screenshot</span>
           <div class="qlt-meta">
-            <input class="qlt-inp" type="text" id="qlt-period" placeholder="Period (e.g. April 2026)" style="width:170px;">
+            <input class="qlt-inp" type="text" id="qlt-period" placeholder="e.g. Apr 2026" style="width:140px;">
             <input class="qlt-inp" type="date" id="qlt-date">
           </div>
         </div>
-
         <!-- PASTE ZONE -->
         <div id="qlt-zone" tabindex="0" onclick="document.getElementById('qlt-zone').focus();"
           onpaste="handleQltPaste(event)"
           onfocus="this.style.borderColor='var(--blue)';this.style.background='#EAF2FF';"
           onblur="this.style.borderColor='var(--blue-b)';this.style.background='var(--blue-s)';"
-          style="border:2px dashed var(--blue-b);border-radius:10px;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--blue-s);outline:none;position:relative;overflow:hidden;transition:all .15s;margin-bottom:10px;">
+          style="border:2px dashed var(--blue-b);border-radius:10px;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--blue-s);outline:none;position:relative;overflow:hidden;transition:all .15s;margin-bottom:10px;">
           <div id="qlt-zone-prompt" style="text-align:center;padding:16px;">
-            <div style="font-size:28px;margin-bottom:6px;">📋</div>
-            <div style="font-size:13px;font-weight:700;color:var(--blue);">Click here · then press ⌘V (Mac) or Ctrl+V (Win)</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Paste any Qualtrics screenshot — Store Summary or NFT Trend</div>
+            <div style="font-size:26px;margin-bottom:6px;">📋</div>
+            <div style="font-size:13px;font-weight:700;color:var(--blue);">Click here · then press ⌘V to paste Qualtrics screenshot</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Always MTD Store/Restaurant/Cafe Summary format</div>
           </div>
-          <img id="qlt-img" style="display:none;max-width:100%;max-height:180px;border-radius:6px;margin:8px;">
+          <img id="qlt-img" style="display:none;max-width:100%;max-height:160px;border-radius:6px;margin:8px;">
         </div>
-
         <!-- OCR PROGRESS -->
         <div id="qlt-ocr-bar" style="display:none;margin-bottom:10px;">
           <div style="height:4px;background:#E2E8F4;border-radius:2px;overflow:hidden;">
@@ -425,56 +463,38 @@ select.trk-inp{cursor:pointer;}
           </div>
           <div id="qlt-ocr-msg" style="font-size:11px;color:var(--muted);font-family:'SF Mono','JetBrains Mono',monospace;margin-top:4px;">Reading...</div>
         </div>
-
-        <!-- EDITABLE REVIEW GRID -->
+        <!-- REVIEW GRID (13 columns) -->
         <div id="qlt-grid" style="display:none;">
-          <div style="display:grid;grid-template-columns:140px repeat(6,1fr);gap:5px;padding:6px 0 5px;border-bottom:1.5px solid var(--border);margin-bottom:5px;">
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Branch</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">NPS</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">OSAT</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">LtRet</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">Respondents</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">NFT Vol</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;">NFT Var%</span>
-          </div>
-          <div id="qlt-rows"></div>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="extract-btn" style="background:var(--blue);box-shadow:0 2px 8px rgba(0,87,217,.35);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted()">✓ Save to Dashboard</button>
-            <button class="extract-btn" style="background:var(--gray-s);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste()">✕ Clear</button>
-          </div>
-        </div>
-
-        <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
-      </div>
-      <div class="others-grid">
-        <div class="card">
-          <div class="card-hd"><span class="hd-title">NPS & OSAT per Branch</span><span style="font-size:12px;">From Qualtrics / Gmail</span></div>
           <div style="overflow-x:auto;">
-            <table class="tbl">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;" id="qlt-review-table">
               <thead>
-                <tr>
-                  <th>Branch</th>
-                  <th style="text-align:center">NPS<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥75</span></th>
-                  <th style="text-align:center">OSAT<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">target ≥4.0</span></th>
-                  <th style="text-align:center">LtRet<span style="font-size:10px;font-weight:400;opacity:.6;display:block;">loyalty score</span></th>
-                  <th style="text-align:center">Respondents</th>
-                  <th style="text-align:center">Complaints</th>
-                  <th style="text-align:center">NFT %</th>
-                  <th style="text-align:center">Period</th>
+                <tr style="border-bottom:2px solid var(--border);">
+                  <th style="text-align:left;padding:5px 8px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:130px">Branch</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS Ct</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NPS Var</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT Ct</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">Top2Box</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">OSAT Var</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NFT</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">NFT Var</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet Ct</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet</th>
+                  <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);">LtRet Var</th>
                 </tr>
               </thead>
-              <tbody id="others-tbody"></tbody>
+              <tbody id="qlt-rows"></tbody>
             </table>
           </div>
-  
-      <div style="padding:8px 16px;font-size:12px;color:var(--muted);" id="nps-sync-status">NPS syncing from Google Sheets...</div>
-      </div>
-        <div class="card" id="voc-panel">
-          <div class="card-hd"><span class="hd-title">VOC Feed</span><span id="voc-count" style="font-size:12px;color:var(--muted)"></span></div>
-          <div style="padding:8px 10px;border-bottom:1px solid var(--border);"><input class="search-bar" id="voc-search" type="text" placeholder="Search VOC..." oninput="renderVOC()"></div>
-          <div id="voc-list"><div class="voc-empty">Loading Gmail...</div></div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="extract-btn" style="background:var(--blue);box-shadow:0 2px 8px rgba(0,87,217,.35);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted()">✓ Save to Dashboard</button>
+            <button class="extract-btn" style="background:var(--gray-s,#F2F2F7);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste()">✕ Clear</button>
+          </div>
         </div>
+        <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
       </div>
+
     </div>
 
     <!-- MTD · SALES -->
@@ -567,7 +587,7 @@ select.trk-inp{cursor:pointer;}
     <!-- MTD · NPS -->
     <div id="pane-mtd-nps" class="tab-combo" style="display:none">
       <div class="card">
-        <div class="card-hd"><span class="hd-title">MTD NPS / VOC Summary</span></div>
+        <div class="card-hd"><span class="hd-title">MTD NPS / OSAT Summary</span></div>
         <div style="overflow-x:auto;">
           <table class="tbl">
             <thead><tr>
@@ -1093,7 +1113,13 @@ try{localStorage.setItem('jb_sub3',JSON.stringify(_newEntries));}catch(e){}
 let vocEntries=JSON.parse(localStorage.getItem('jb_voc_all')||'[]');
 let vocData=vocEntries;
 // Manual NPS entries from Qualtrics screenshots
-const _npsPreload=[{"branch": "JB3595", "date": "2026-04-19", "period": "Apr 2026", "nps": 50.0, "osat": 4.4, "respondents": 286, "complaints": 8, "nft_pct": 1.8, "ltret": 4.6}, {"branch": "JB3353", "date": "2026-04-19", "period": "Apr 2026", "nps": 71.4, "osat": 4.4, "respondents": 248, "complaints": 7, "nft_pct": 1.6, "ltret": 4.7}, {"branch": "JB0087", "date": "2026-04-19", "period": "Apr 2026", "nps": 50.0, "osat": 4.0, "respondents": 59, "complaints": 6, "nft_pct": 1.8, "ltret": 5.0}, {"branch": "JB3702", "date": "2026-04-19", "period": "Apr 2026", "nps": 66.7, "osat": 4.2, "respondents": 274, "complaints": 13, "nft_pct": 4.0, "ltret": 4.2}];
+const _npsPreload=[
+  {"branch":"JB3353","period":"Apr 2026","date":"2026-04-19","npsCount":169,"nps":69.8,"npsVar":-5.7,"osatCount":918,"osatTop2":94.9,"osat":4.8,"osatVar":-0.1,"nft":1.5,"nftVar":0.9,"ltretCount":165,"ltret":4.5,"ltretVar":-0.1},
+  {"branch":"JB0087","period":"Apr 2026","date":"2026-04-19","npsCount":58,"nps":70.7,"npsVar":17.7,"osatCount":248,"osatTop2":92.7,"osat":4.7,"osatVar":0.0,"nft":0.8,"nftVar":0.6,"ltretCount":57,"ltret":4.5,"ltretVar":0.2},
+  {"branch":"JB3595","period":"Apr 2026","date":"2026-04-19","npsCount":324,"nps":68.2,"npsVar":7.7,"osatCount":1165,"osatTop2":91.2,"osat":4.7,"osatVar":-0.1,"nft":3.5,"nftVar":2.2,"ltretCount":319,"ltret":4.6,"ltretVar":0.2},
+  {"branch":"JB3702","period":"Apr 2026","date":"2026-04-19","npsCount":221,"nps":73.8,"npsVar":-4.7,"osatCount":927,"osatTop2":94.3,"osat":4.8,"osatVar":-0.1,"nft":2.6,"nftVar":1.5,"ltretCount":218,"ltret":4.6,"ltretVar":-0.0},
+  {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
+];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
 // Merge: preload + any additional stored entries
 const _npsMerged=_npsPreload.slice();
@@ -1638,34 +1664,102 @@ function renderCostsTable(){
 // ── RENDER OTHERS TABLE ──
 function renderOthersTable(){
   const tbody=document.getElementById('others-tbody');
+  if(!tbody)return;
   tbody.innerHTML='';
-  const ym=viewDate.slice(0,7);
+  const QSN={'JB3353':'3353|Gil Fernando Sumulong Hiway','JB0087':'87|Marikina Bayan/Shoe Ave','JB3595':'3595|Ejercito C6','JB3702':'3702|Marilaque','JB3753':'3753|Highway 2000'};
+  const fmt=(v,dec=1)=>v===null||v===undefined?'—':(typeof v==='number'?v.toFixed(dec):v);
+  const fmtI=(v)=>v===null||v===undefined?'—':v.toLocaleString();
+  const varCls=(v,invertRed)=>{
+    if(v===null||v===undefined)return'em';
+    if(invertRed){return v>0?'br':'ok';} // NFT: positive var = worse
+    return v>=0?'ok':'br';
+  };
+  const scoreCls=(v,tgt)=>v===null?'em':v>=tgt?'ok':v>=(tgt-.5)?'wa':'br';
+  // Find the current period from latest entries
+  let currentPeriod='';
   BRANCHES.forEach(b=>{
-    // Get latest manual NPS entry for this branch
     const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
-    const latest=entries[0]||null;
-    const nps=latest?latest.nps:null;
-    const osat=latest?latest.osat:null;
-    const ltret=latest?latest.ltret:null;
-    const resp=latest?latest.respondents:null;
-    const comp=latest?latest.complaints:null;
-    const nft=latest?latest.nft_pct:null;
-    const period=latest?latest.period:'—';
-    const npsBr=nps!==null&&nps<75;
-    const osatBr=osat!==null&&osat<4.0;
-    const ltretBr=ltret!==null&&ltret<4.0;
-    const fmt=v=>v!==null?v:'—';
-    tbody.innerHTML+=`<tr>
-      <td><span class="b-code">${b.code}</span><span class="b-name">${b.name}</span></td>
-      <td style="text-align:center"><span class="kv ${nps===null?'em':npsBr?'br':'ok'}">${fmt(nps)}</span></td>
-      <td style="text-align:center"><span class="kv ${osat===null?'em':osatBr?'br':'ok'}">${fmt(osat)}</span></td>
-      <td style="text-align:center"><span class="kv ${ltret===null?'em':ltretBr?'br':'ok'}">${fmt(ltret)}</span></td>
-      <td style="text-align:center"><span class="kv ${resp===null?'em':'ok'}">${fmt(resp)}</span></td>
-      <td style="text-align:center"><span class="kv ${comp===null?'em':comp>10?'br':comp>5?'wa':'ok'}">${fmt(comp)}</span></td>
-      <td style="text-align:center"><span class="kv ${nft===null?'em':nft>3?'br':nft>1.5?'wa':'ok'}">${nft!==null?nft+'%':'—'}</span></td>
-      <td style="text-align:center;font-size:11px;color:var(--muted)">${period}</td>
-    </tr>`;
+    if(entries[0]&&entries[0].period)currentPeriod=entries[0].period;
   });
+  const periodEl=document.getElementById('qlt-period-display');
+  if(periodEl)periodEl.textContent=currentPeriod;
+  BRANCHES.forEach(b=>{
+    const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
+    const d=entries[0]||{};
+    const storeName=QSN[b.code]||b.code;
+    const nps=d.nps!==undefined?d.nps:null;
+    const npsVar=d.npsVar!==undefined?d.npsVar:null;
+    const osat=d.osat!==undefined?d.osat:null;
+    const osatVar=d.osatVar!==undefined?d.osatVar:null;
+    const nft=d.nft!==undefined?d.nft:(d.nft_pct!==undefined?d.nft_pct:null);
+    const nftVar=d.nftVar!==undefined?d.nftVar:null;
+    const ltret=d.ltret!==undefined?d.ltret:null;
+    const ltretVar=d.ltretVar!==undefined?d.ltretVar:null;
+    const varPill=(v,inv)=>{
+      if(v===null||v===undefined)return'<span style="color:var(--muted);font-size:11px;">—</span>';
+      const pos=!inv?v>=0:v<=0;
+      const col=pos?'var(--green)':'var(--red)';
+      const bg=pos?'var(--green-s)':'var(--red-s)';
+      const arrow=pos?'▲':'▼';
+      return\`<span style="display:inline-flex;align-items:center;gap:2px;font-size:12px;font-weight:700;color:\${col};background:\${bg};border-radius:4px;padding:1px 6px;">\${arrow}\${Math.abs(v).toFixed(1)}</span>\`;
+    };
+    tbody.innerHTML+=\`<tr>
+      <td style="font-weight:600;font-size:12px;">\${storeName}</td>
+      <td style="text-align:right;font-size:12px;">\${fmtI(d.npsCount)}</td>
+      <td style="text-align:right"><span class="kv \${scoreCls(nps,75)}">\${nps!==null?nps.toFixed(1):'—'}</span></td>
+      <td style="text-align:right">\${varPill(npsVar,false)}</td>
+      <td style="text-align:right;font-size:12px;">\${fmtI(d.osatCount)}</td>
+      <td style="text-align:right;font-size:12px;">\${d.osatTop2!==null&&d.osatTop2!==undefined?d.osatTop2.toFixed(1)+'%':'—'}</td>
+      <td style="text-align:right"><span class="kv \${scoreCls(osat,4.5)}">\${osat!==null?osat.toFixed(1):'—'}</span></td>
+      <td style="text-align:right">\${varPill(osatVar,false)}</td>
+      <td style="text-align:right"><span class="kv \${nft===null?'em':nft>4?'br':nft>2?'wa':'ok'}">\${nft!==null?nft.toFixed(1):'—'}</span></td>
+      <td style="text-align:right">\${varPill(nftVar,true)}</td>
+      <td style="text-align:right;font-size:12px;">\${fmtI(d.ltretCount)}</td>
+      <td style="text-align:right"><span class="kv \${scoreCls(ltret,4.5)}">\${ltret!==null?ltret.toFixed(1):'—'}</span></td>
+      <td style="text-align:right">\${varPill(ltretVar,false)}</td>
+    </tr>\`;
+  });
+  renderNPSRankings();
+}
+
+function renderNPSRankings(){
+  const cont=document.getElementById('nps-rankings-body');
+  if(!cont)return;
+  const metrics=[
+    {key:'nps',  label:'NPS',        asc:false,tgt:75,  fmt:v=>v.toFixed(1)},
+    {key:'osat', label:'OSAT',       asc:false,tgt:4.5, fmt:v=>v.toFixed(1)},
+    {key:'ltret',label:'LtRet Score',asc:false,tgt:4.5, fmt:v=>v.toFixed(1)},
+    {key:'nft',  label:'NFT Score',  asc:true, tgt:2,   fmt:v=>v.toFixed(1),note:'lower=better'},
+  ];
+  const QSN={'JB3353':'Gil Fernando','JB0087':'Marikina Bayan','JB3595':'Ejercito','JB3702':'Marilaque','JB3753':'Highway 2000'};
+  const getLatest=bc=>{
+    const e=npsManual.filter(n=>n.branch===bc).sort((a,c)=>c.date.localeCompare(a.date))[0]||{};
+    if(e.nft===undefined&&e.nft_pct!==undefined)e.nft=e.nft_pct;
+    return e;
+  };
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">';
+  metrics.forEach(m=>{
+    let rows=BRANCHES.map(b=>{
+      const d=getLatest(b.code);
+      return{code:b.code,name:QSN[b.code]||b.code,val:d[m.key]!==undefined&&d[m.key]!==null?d[m.key]:null};
+    }).filter(r=>r.val!==null);
+    rows.sort((a,b)=>m.asc?a.val-b.val:b.val-a.val);
+    html+=\`<div style="background:var(--bg);border-radius:10px;padding:12px;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">\${m.label}\${m.note?' <span style=\"opacity:.6;font-weight:500;font-size:10px\">('+m.note+')</span>':''}</div>\`;
+    if(!rows.length){html+='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No data</div>';}
+    rows.forEach((r,i)=>{
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      const good=m.asc?r.val<=m.tgt:r.val>=m.tgt;
+      const col=good?'var(--green)':r.val>=(m.tgt*(m.asc?1.5:0.95))||(!m.asc&&r.val>=(m.tgt-.3))?'var(--amber)':'var(--red)';
+      html+=\`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:12px;">\${medal} \${r.name}</span>
+        <span style="font-size:13px;font-weight:700;color:\${col};">\${m.fmt(r.val)}</span>
+      </div>\`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
 }
 
 // ── RENDER FLAGS (per-branch cards) ──
@@ -2998,7 +3092,7 @@ function renderTCAC(){
   </tr></thead><tbody>${branchRows}</tbody></table>`;
 }
 
-function renderAll(){renderSalesTable();renderCostsTable();renderOthersTable();renderFlags();renderLog();renderFAS();renderPCF();renderTCAC();}
+function renderAll(){renderSalesTable();renderCostsTable();renderOthersTable();renderFlags();renderLog();renderFAS();renderPCF();renderTCAC();renderNPSRankings();}
 
 
 // init all date pickers to today (all three are always in sync)
@@ -3630,70 +3724,55 @@ function runQltOCR(url){
 
 function parseQltText(raw){
   var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
-  var headerTxt=lines.slice(0,4).join(' ').toLowerCase();
-  var isStore=headerTxt.includes('nps')||headerTxt.includes('osat');
-  var isNFT=headerTxt.includes('negative')||headerTxt.includes('nft trend')||headerTxt.includes('feedback');
-
   qltData={};
-
-  // Merge consecutive lines belonging to same branch (OCR sometimes splits)
+  // Merge consecutive lines belonging to same branch
   var merged=[];
   for(var i=0;i<lines.length;i++){
     var bc=matchBranch(lines[i]);
     if(bc){
       var row=lines[i];
-      // Look ahead: if next line(s) have numbers but no branch match, append
-      while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<80){
+      while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
         i++; row+=' '+lines[i];
       }
       merged.push({bc:bc,row:row});
     }
   }
-
   merged.forEach(function(m){
     var bc=m.bc, row=m.row;
-    // Extract all numbers (including negatives and decimals)
+    // Extract all numbers (including negatives)
     var nums=(row.match(/-?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
-    // Remove store code numbers (3353, 3595, 3702, 87, 3753)
-    nums=nums.filter(function(n){return![3353,3595,3702,87,3753,0087].includes(n);});
-
-    var e={branch:bc,period:document.getElementById('qlt-period').value||'MTD',
+    // Remove store code numbers
+    nums=nums.filter(function(n){return![3353,3595,3702,87,3753,88,87].includes(Math.abs(n));});
+    // Column layout (Qualtrics Store/Restaurant/Cafe Summary):
+    // NPS Count | NPS | NPS Var | OSAT Count | OSAT Top2Box% | OSAT | OSAT Var | NFT Score | NFT Var | LtRet Count | LtRet Score | LtRet Var
+    // Identify types: large int=counts, 0-100=NPS or Top2Box, 0-5=OSAT/LtRet/NFT, small neg/pos=variance
+    var counts=[], npsScores=[], top2=[], osatScores=[], nftScores=[], variances=[];
+    nums.forEach(function(n){
+      var abs=Math.abs(n);
+      if(n===Math.floor(n)&&n>10&&n<5000) counts.push(n);           // counts
+      else if(abs>=30&&abs<=100&&n===Math.floor(n)) npsScores.push(n); // round NPS
+      else if(abs>=30&&abs<=100) npsScores.push(n);                    // decimal NPS
+      else if(abs>=85&&abs<=100) top2.push(n);                         // OSAT Top2 Box %
+      else if(abs>=3.5&&abs<=5.5) osatScores.push(n);                  // OSAT/LtRet
+      else if(abs>=0&&abs<10&&n!==Math.floor(n)) variances.push(n);    // variances
+      else if(abs>=0&&abs<5) nftScores.push(n);                        // NFT
+    });
+    var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
-           nps:0,osat:0,ltret:null,respondents:0,complaints:0,nft_pct:0};
-
-    if(isNFT&&!isStore){
-      // NFT Trend: Total Response, Negative Feedback Vol
-      var pos=nums.filter(function(n){return n>0&&n===Math.floor(n);});
-      if(pos[0])e.respondents=pos[0];
-      if(pos[1])e.complaints=pos[1];
-    } else {
-      // Store Summary column order:
-      // NPS Count | NPS | NPS Var | OSAT Count | OSAT Top2 | OSAT | OSAT Var | NFT Var | LtRet Count | LtRet | LtRet Var
-      // Heuristic: NPS is 0-100 decimal; OSAT/LtRet is 0-5 decimal; counts are integers >5
-      var decimals=nums.filter(function(n){return n!==Math.floor(n)||Math.abs(n)>100;});
-      var integers=nums.filter(function(n){return n===Math.floor(n)&&n>5&&n<10000;});
-      var small=nums.filter(function(n){return Math.abs(n)<=5.5&&n!==Math.floor(n);});    // OSAT/LtRet range
-      var npsRange=nums.filter(function(n){return n>5&&n<=100;});
-
-      // NPS score: first value in 0-100 range that looks like a score (has decimal or is round)
-      if(npsRange.length)e.nps=npsRange[0];
-      // OSAT: first value in 0-5 range
-      var osatCands=small.filter(function(n){return n>=3&&n<=5;});
-      if(osatCands.length)e.osat=osatCands[0];
-      // LtRet: second value in 0-5 range
-      if(osatCands.length>1)e.ltret=osatCands[1];
-      // Respondents: first integer between 5 and 500
-      var respCands=integers.filter(function(n){return n>=5&&n<=500;});
-      if(respCands.length)e.respondents=respCands[0];
-      // NFT Var: small decimal (can be negative)
-      var nftCands=nums.filter(function(n){return Math.abs(n)<10&&n!==Math.floor(n)&&!(n>=3&&n<=5);});
-      if(nftCands.length)e.nft_pct=nftCands[nftCands.length-1]; // last one tends to be NFT var
-    }
+           npsCount:counts[0]||null, nps:npsScores[0]||null, npsVar:null,
+           osatCount:counts[1]||null, osatTop2:top2[0]||null,
+           osat:osatScores[0]||null, osatVar:null,
+           nft:nftScores[0]||null, nftVar:null,
+           ltretCount:counts[2]||null, ltret:osatScores[1]||null, ltretVar:null};
+    // Assign variances by position in variance list
+    if(variances[0]!==undefined)e.npsVar=variances[0];
+    if(variances[1]!==undefined)e.osatVar=variances[1];
+    if(variances[2]!==undefined)e.nftVar=variances[2];
+    if(variances[3]!==undefined)e.ltretVar=variances[3];
     qltData[bc]=e;
   });
-
   if(!Object.keys(qltData).length){
-    document.getElementById('qlt-status').textContent='Could not detect branch data. Check screenshot — ensure branch names/codes are visible.';
+    document.getElementById('qlt-status').textContent='Could not detect branch data — ensure store codes/names are visible in screenshot.';
     return;
   }
   renderQltGrid();
@@ -3705,49 +3784,67 @@ function matchBranch(line){
 }
 
 function renderQltGrid(){
-  var container=document.getElementById('qlt-rows');
-  container.innerHTML='';
+  var tbody=document.getElementById('qlt-rows');
+  if(!tbody){return;}
+  tbody.innerHTML='';
   QBR.forEach(function(b){
     var d=qltData[b.code]||{};
-    var row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:140px repeat(6,1fr);gap:5px;align-items:center;padding:5px 0;border-bottom:1px solid #EDF0F8;';
-    row.innerHTML=
-      '<span style="font-size:12px;font-weight:700;color:var(--text);">'+b.code+'<span style="display:block;font-size:10px;font-weight:500;color:var(--muted);">'+b.name+'</span></span>'+
-      mkInp('q_'+b.key+'_nps',  d.nps||'',  'step','0.1')+
-      mkInp('q_'+b.key+'_osat', d.osat||'', 'step','0.1')+
-      mkInp('q_'+b.key+'_ltret',d.ltret!==null?d.ltret:'','step','0.1')+
-      mkInp('q_'+b.key+'_resp', d.respondents||'','type','number')+
-      mkInp('q_'+b.key+'_nft',  d.complaints||'','type','number')+
-      mkInp('q_'+b.key+'_nftvar',d.nft_pct||'','step','0.1');
-    container.appendChild(row);
+    var k=b.key;
+    var tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid var(--border)';
+    tr.innerHTML=
+      '<td style="padding:4px 8px;font-size:12px;font-weight:700;white-space:nowrap;">'+b.code+'<br><span style="font-size:10px;font-weight:400;color:var(--muted);">'+b.name+'</span></td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_nct',  d.npsCount||'','','integer')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_nps',  d.nps!=null?d.nps:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_nvar', d.npsVar!=null?d.npsVar:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_oct',  d.osatCount||'','','integer')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_top2', d.osatTop2!=null?d.osatTop2:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_osat', d.osat!=null?d.osat:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_ovar', d.osatVar!=null?d.osatVar:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_nft',  d.nft!=null?d.nft:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_nftv', d.nftVar!=null?d.nftVar:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_lct',  d.ltretCount||'','','integer')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_ltr',  d.ltret!=null?d.ltret:'','step','0.1')+'</td>'+
+      '<td style="padding:3px;">'+mkInp('q_'+k+'_lvar', d.ltretVar!=null?d.ltretVar:'','step','0.1')+'</td>';
+    tbody.appendChild(tr);
   });
   document.getElementById('qlt-grid').style.display='block';
   var found=Object.keys(qltData).map(function(bc){return bc.replace('JB','');}).join(', ');
-  document.getElementById('qlt-status').textContent='Detected: '+found+' — review values below, correct if needed, then Save.';
+  document.getElementById('qlt-status').textContent='Detected: '+found+' — correct values if needed, then Save.';
   document.getElementById('qlt-status').style.color='var(--blue)';
 }
 
 function mkInp(id,val,attr,attrVal){
-  return '<input class="qlt-inp" type="number" id="'+id+'" value="'+(val||'')+'" '+(attr?attr+'="'+attrVal+'"':'')+' style="width:100%;text-align:center;">';
+  var step=attr==='step'?'step="'+attrVal+'"':'';
+  return '<input class="qlt-inp" type="number" id="'+id+'" value="'+(val!==null&&val!==undefined&&val!==''?val:'')+'" '+step+' style="width:72px;text-align:center;padding:3px 4px;">';
 }
 
 function gqn(id){var el=document.getElementById(id);if(!el||el.value==='')return null;var n=parseFloat(el.value);return isNaN(n)?null:n;}
 function gqi(id){var el=document.getElementById(id);if(!el||el.value==='')return null;var n=parseInt(el.value);return isNaN(n)?null:n;}
 
 function saveQltExtracted(){
-  var period=document.getElementById('qlt-period').value||'MTD';
+  var period=document.getElementById('qlt-period').value||'';
   var rDate=document.getElementById('qlt-date').value||today;
+  if(!period){document.getElementById('qlt-status').textContent='Set the period first (e.g. Apr 2026)';return;}
   var saved=[];
   QBR.forEach(function(b){
     var k=b.key,bc=b.code;
-    var nps=gqn('q_'+k+'_nps'),osat=gqn('q_'+k+'_osat'),ltret=gqn('q_'+k+'_ltret');
-    var resp=gqi('q_'+k+'_resp'),nft=gqi('q_'+k+'_nft'),nftvar=gqn('q_'+k+'_nftvar');
-    if(nps===null&&osat===null&&resp===null)return;
-    var data={branch:bc,period:period,date:rDate,nps:nps||0,osat:osat||0,ltret:ltret,respondents:resp||0,complaints:nft||0,nft_pct:nftvar||0};
+    var npsCount=gqi('q_'+k+'_nct'), nps=gqn('q_'+k+'_nps'), npsVar=gqn('q_'+k+'_nvar');
+    var osatCount=gqi('q_'+k+'_oct'), osatTop2=gqn('q_'+k+'_top2');
+    var osat=gqn('q_'+k+'_osat'), osatVar=gqn('q_'+k+'_ovar');
+    var nft=gqn('q_'+k+'_nft'), nftVar=gqn('q_'+k+'_nftv');
+    var ltretCount=gqi('q_'+k+'_lct'), ltret=gqn('q_'+k+'_ltr'), ltretVar=gqn('q_'+k+'_lvar');
+    if(nps===null&&osat===null&&ltret===null)return;
+    var data={branch:bc,period:period,date:rDate,
+              npsCount:npsCount,nps:nps,npsVar:npsVar,
+              osatCount:osatCount,osatTop2:osatTop2,osat:osat,osatVar:osatVar,
+              nft:nft,nftVar:nftVar,
+              ltretCount:ltretCount,ltret:ltret,ltretVar:ltretVar};
+    // Save per-period: one record per branch per period
     var found=false;
     for(var j=0;j<npsManual.length;j++){
-      if(npsManual[j].branch===bc){
-        Object.keys(data).forEach(function(fk){if(data[fk]!==null&&data[fk]!==0)npsManual[j][fk]=data[fk];});
+      if(npsManual[j].branch===bc&&npsManual[j].period===period){
+        Object.keys(data).forEach(function(fk){if(data[fk]!==null)npsManual[j][fk]=data[fk];});
         found=true;break;
       }
     }
@@ -3757,9 +3854,8 @@ function saveQltExtracted(){
   if(!saved.length){document.getElementById('qlt-status').textContent='No data to save.';return;}
   try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(ex){}
   renderOthersTable();
-  if(typeof renderNPSHistory==='function')renderNPSHistory();
   var st=document.getElementById('qlt-status');
-  st.textContent='✓ Saved — '+saved.join(', ')+' · Period: '+period;
+  st.textContent='✓ Saved — '+saved.join(', ')+' · '+period;
   st.style.color='var(--green)';
 }
 
