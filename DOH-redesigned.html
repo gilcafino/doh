@@ -493,6 +493,10 @@ select.trk-inp{cursor:pointer;}
           </div>
         </div>
         <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
+        <details style="margin-top:6px;">
+          <summary style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none;">Show raw OCR text (debug)</summary>
+          <pre id="qlt-debug" style="font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></pre>
+        </details>
       </div>
 
     </div>
@@ -1064,11 +1068,11 @@ const today=new Date().toISOString().split('T')[0];
 
 // QBR branch patterns for Qualtrics OCR matching — declared early so render calls below can't crash before it's assigned
 var QBR=[
-  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fernando|sumulong/i},
-  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina\s*bayan|shoe\s*ave/i},
+  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fern|sumulong/i},
+  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|shoe\s*ave/i},
   {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
   {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
-  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway\s*2?0+0/i}
+  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway|hwy\s*2/i}
 ];
 var qltData={};
 
@@ -3711,13 +3715,24 @@ function parseQltText(raw){
   var _step='init';
   try{
   _step='split'; var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
+  // Debug: show raw OCR lines in status
+  var dbg=document.getElementById('qlt-debug');
+  if(dbg){dbg.textContent='OCR lines ('+lines.length+'):\n'+lines.slice(0,30).join('\n');}
   _step='qltData init'; qltData={};
   // Merge consecutive lines belonging to same branch
   _step='merge'; var merged=[];
   for(var i=0;i<lines.length;i++){
-    _step='matchBranch line '+i; var bc=matchBranch(lines[i]);
+    _step='matchBranch line '+i;
+    var bc=matchBranch(lines[i]);
+    var startLine=lines[i];
+    // Try combining current + next line — handles OCR wrapping store names across 2 lines
+    if(!bc && i+1<lines.length){
+      var combo=lines[i]+' '+lines[i+1];
+      var bc2=matchBranch(combo);
+      if(bc2){bc=bc2; startLine=combo; i++;}
+    }
     if(bc){
-      var row=lines[i];
+      var row=startLine;
       while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
         i++; row+=' '+lines[i];
       }
