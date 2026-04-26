@@ -400,6 +400,7 @@ select.trk-inp{cursor:pointer;}
               <th>Branch</th>
               <th style="text-align:right">TC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Total Txns</span></th>
               <th style="text-align:right">Net Sales<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Sales · AC=Sales÷TC</span></th>
+              <th style="text-align:right">Reg Sales<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Sales · TC · AC=Sales÷TC</span></th>
               <th style="text-align:right">DThru<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Sales · AC=Sales÷TC</span></th>
               <th style="text-align:right">Grab<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Sales · AC=Sales÷TC</span></th>
               <th style="text-align:right">FPanda<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Sales · AC=Sales÷TC</span></th>
@@ -415,7 +416,7 @@ select.trk-inp{cursor:pointer;}
         </div>
         <details id="tcac-mtd-wrap" style="border-top:1px solid var(--border);">
           <summary style="padding:8px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
-            <span style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">📊 MTD Average AC</span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">📊 TC &amp; AC Ranking (MTD)</span>
             <span id="tcac-mtd-pill" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-right:8px"></span>
             <span class="sec-toggle" style="font-size:11px"></span>
           </summary>
@@ -619,7 +620,7 @@ select.trk-inp{cursor:pointer;}
   <div class="sec-label">Paste Viber Report</div>
   <div class="viber-card">
     <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;">
-      <textarea class="paste-area" id="ps-txt" placeholder="Paste Viber message here...&#10;&#10;Branch &amp; date auto-detected from report text.&#10;&#10;TSLE: 512k&#10;NSales: 503k&#10;MOD: Riza/John&#10;LC: 12.01%&#10;FCPC Actual: 44.93%&#10;DThru: 184k&#10;Grab: 65k&#10;FPanda: 0k&#10;Jb Del App: 0k&#10;JKP: 0k&#10;BOS: 0k&#10;LPG: 31.70&#10;kWh: 1,766&#10;Water (Main): 13.76&#10;Water (Sub): 0.00"></textarea>
+      <textarea class="paste-area" id="ps-txt" placeholder="Paste Viber message here...&#10;&#10;Branch &amp; date auto-detected from report text.&#10;&#10;TSLE: 512k&#10;NSales: 503k&#10;Reg NSales: 350k&#10;Reg TC: 1200&#10;MOD: Riza/John&#10;LC: 12.01%&#10;FCPC Actual: 44.93%&#10;DThru: 184k&#10;Grab: 65k&#10;FPanda: 0k&#10;Jb Del App: 0k&#10;JKP: 0k&#10;BOS: 0k&#10;LPG: 31.70&#10;kWh: 1,766&#10;Water (Main): 13.76&#10;Water (Sub): 0.00"></textarea>
       <div style="display:flex;flex-direction:column;gap:8px;padding-top:2px;">
         <button class="extract-btn" onclick="extractViber()">⚡ Extract & Save</button>
         <button class="extract-btn" style="background:var(--gray-s);color:var(--text);border:1px solid var(--border);" onclick="clearInput()">Clear</button>
@@ -1415,6 +1416,17 @@ function parseViber(txt){
     date:g(/(\w+ \d+,\s*\d{4})/,''),
     nsales:gn(/NSales:\s*([\d.,k]+)/i),
     tsle:gn(/TSLE:\s*([\d.,k]+)/i),
+    // Regular Sales (in-store sales) — Sales line + TC on the line directly below. AC = regSales / regTc
+    // Real Viber format: "*Total Reg NSales*: 137k\nTC: 526" — handles asterisks around label and the TC-on-next-line pattern
+    regSales:gn(/Reg(?:ular)?\s*N?Sales\*?\s*:\s*([\d.,k]+)/i),
+    regTc:(()=>{
+      // Primary: TC line directly under Total Reg NSales (per Gil's confirmed Viber format)
+      const m=txt.match(/Reg(?:ular)?\s*N?Sales\*?\s*:\s*[\d.,k]+\s*\n\s*TC[:\s]+([\d,]+)/i);
+      if(m)return parseInt(m[1].replace(/,/g,''));
+      // Fallback: explicit "Reg TC: NNN" label
+      const m2=txt.match(/Reg(?:ular)?\s*TC\s*:\s*([\d,]+)/i);
+      return m2?parseInt(m2[1].replace(/,/g,'')):0;
+    })(),
     tc:(()=>{
       // try start-of-line first, then anywhere in message
       const m=txt.match(/^TC[:\s]+(\d[\d,]*)/m)||txt.match(/\bTC[:\s]+(\d[\d,]*)/i);
@@ -1973,7 +1985,50 @@ function generateAnalysis(){
     });
     html+=`</div></div>`;
 
-    
+    // ── SECTION 1.5: Regular Net Sales — TC + AC (placed right after Sales Performance per Gil's spec) ──
+    // Reg NSales TC = parsed regTc per branch (raw transaction count)
+    // Reg NSales AC = regSales ÷ regTc (computed, never guessed)
+    const regTcRanked=activeSubs.map(s=>{
+      if(!s)return{name:'?',tc:0,noData:true};
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const tc=Number(s.regTc)||0;
+      return{name:b?b.name:s.branch,tc,noData:!tc};
+    }).filter(x=>!x.noData).sort((a,b)=>b.tc-a.tc);
+    const regAcRanked=activeSubs.map(s=>{
+      if(!s)return{name:'?',ac:0,noData:true};
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const sales=Number(s.regSales)||0;
+      const tc=Number(s.regTc)||0;
+      const ac=(sales>0&&tc>0)?Math.round(sales/tc):0;
+      return{name:b?b.name:s.branch,ac,noData:!ac};
+    }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
+    if(regTcRanked.length>0||regAcRanked.length>0){
+      html+=`<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">🍔 Regular Net Sales — TC &amp; AC</div>`;
+      html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">`;
+      if(regTcRanked.length>0){
+        html+=`<div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">TC · Reg NSales</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">`;
+        regTcRanked.forEach((s,i)=>{
+          html+=rankRow(rankBadge(i),s.name,s.tc.toLocaleString()+' txns','var(--text)','');
+        });
+        html+=`</div></div>`;
+      }
+      if(regAcRanked.length>0){
+        html+=`<div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · Reg NSales</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">`;
+        regAcRanked.forEach((s,i)=>{
+          const val='₱'+s.ac.toLocaleString();
+          const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+          html+=rankRow(rankBadge(i),s.name,val,cl,'');
+        });
+        html+=`</div></div>`;
+      }
+      html+=`</div></div>`;
+    }
+
+
     // ── SECTION 2: Transaction Count + All AC Rankings (same row grid) ──
     html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Transaction & Average Check Rankings</div>`;
     html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">`;
@@ -1984,7 +2039,7 @@ function generateAnalysis(){
     }).sort((a,b)=>b.tc-a.tc);
 
     html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Transaction Count</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Net Sales TC</div>
       <div style="display:flex;flex-direction:column;gap:4px;">`;
     tcRanked.forEach((s,i)=>{
       const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
@@ -2002,7 +2057,7 @@ function generateAnalysis(){
     }).sort((a,b)=>b.ac-a.ac);
 
     html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Average Check</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Net Sales AC</div>
       <div style="display:flex;flex-direction:column;gap:4px;">`;
     acRanked.forEach((s,i)=>{
       const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
@@ -2011,13 +2066,71 @@ function generateAnalysis(){
     });
     html+=`</div></div>`;
 
-    
+    // ── RANKING 5a: Total Reg NSales TC (highest → lowest) — TC before AC per Gil's spec ──
+    const gridRegTc=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const tc=Number(s.regTc)||0;
+      return{name:b?b.name:s.branch,tc,noData:!tc};
+    }).sort((a,b)=>b.tc-a.tc);
+    html+=`<div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Total Reg NSales TC</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    gridRegTc.forEach((s,i)=>{
+      const val=s.noData?'No data':s.tc.toLocaleString()+' txns';
+      const cl=s.noData?'var(--muted)':'var(--text)';
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+    // ── RANKING 5b: Total Reg NSales AC (highest → lowest) ──
+    // Confirmed formula: Reg AC = Reg NSales ÷ Reg TC
+    const gridRegAc=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const sales=Number(s.regSales)||0;
+      const tc=Number(s.regTc)||0;
+      const ac=tc>0?Math.round(sales/tc):0;
+      return{name:b?b.name:s.branch,ac,noData:!ac};
+    }).sort((a,b)=>b.ac-a.ac);
+    html+=`<div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Total Reg NSales AC</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+    gridRegAc.forEach((s,i)=>{
+      const val=s.noData?'No data':'₱'+s.ac.toLocaleString();
+      const cl=s.noData?'var(--muted)':s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+      html+=rankRow(rankBadge(i),s.name,val,cl,'');
+    });
+    html+=`</div></div>`;
+
+
     // ── RANKING 6: NPS (best → worst from npsManual) ──
     
-    // ── RANKING 7: AC per Channel ──
-    const chNames=['DThru','Grab','FPanda','JB Del','JKP'];
-    const chKeys=['dthru','grab','fpanda','jbdel','jkp'];
-    const chTcKeys=['dthruTc','grabTc','fpandaTc','jbdelTc','jkpTc'];
+    // ── RANKING 7: TC per Channel (DThru + BOS) — TC always shown before AC per Gil's spec ──
+    // Confirmed formula: rank by raw transaction count per channel, highest first.
+    const chNames=['DThru','BOS'];
+    const chKeys=['dthru','bos'];
+    const chTcKeys=['dthruTc','bosTc'];
+    chNames.forEach((chName,ci)=>{
+      const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
+      const chRanked=activeSubs.map(s=>{
+        if(!s)return{name:'?',tc:0,noData:true};
+        const b=BRANCHES.find(x=>x.code===s.branch);
+        const sales=s[chKey]||0;
+        const tc=s[tcKey]||0;
+        return{name:b?b.name:s.branch,tc,noData:!sales&&!tc};
+      }).filter(x=>!x.noData).sort((a,b)=>b.tc-a.tc);
+      if(chRanked.length===0)return;
+      html+=`<div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">TC · ${chName}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+      chRanked.forEach((s,i)=>{
+        const val=s.tc>0?s.tc.toLocaleString()+' txns':'No TC';
+        const cl=s.tc>0?'var(--text)':'var(--muted)';
+        html+=rankRow(rankBadge(i),s.name,val,cl,'');
+      });
+      html+=`</div></div>`;
+    });
+
+    // ── RANKING 8: AC per Channel (DThru + BOS only — Grab/FPanda/JB Del/JKP removed per Gil's spec; delivery shown as Total Delivery below) ──
     chNames.forEach((chName,ci)=>{
       const chKey=chKeys[ci];const tcKey=chTcKeys[ci];
       const chRanked=activeSubs.map(s=>{
@@ -2039,6 +2152,45 @@ function generateAnalysis(){
       });
       html+=`</div></div>`;
     });
+
+    // ── RANKING 9: Total Delivery TC + AC (new) ──
+    // Total Delivery Sales = Grab + FPanda + JB Del (JKP excluded per Gil's spec)
+    // Total Delivery TC    = grabTc + fpandaTc + jbdelTc
+    // Total Delivery AC    = (Grab+FPanda+JB Del) ÷ (grabTc+fpandaTc+jbdelTc)
+    const delTcRanked=activeSubs.map(s=>{
+      if(!s)return{name:'?',tc:0,noData:true};
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);
+      return{name:b?b.name:s.branch,tc,noData:!tc};
+    }).filter(x=>!x.noData).sort((a,b)=>b.tc-a.tc);
+    if(delTcRanked.length>0){
+      html+=`<div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">TC · Total Delivery</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+      delTcRanked.forEach((s,i)=>{
+        html+=rankRow(rankBadge(i),s.name,s.tc.toLocaleString()+' txns','var(--text)','');
+      });
+      html+=`</div></div>`;
+    }
+    const delAcRanked=activeSubs.map(s=>{
+      if(!s)return{name:'?',ac:0,noData:true};
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const sales=(Number(s.grab)||0)+(Number(s.fpanda)||0)+(Number(s.jbdel)||0);
+      const tc=(Number(s.grabTc)||0)+(Number(s.fpandaTc)||0)+(Number(s.jbdelTc)||0);
+      const ac=(sales>0&&tc>0)?Math.round(sales/tc):0;
+      return{name:b?b.name:s.branch,ac,noData:!ac};
+    }).filter(x=>!x.noData).sort((a,b)=>b.ac-a.ac);
+    if(delAcRanked.length>0){
+      html+=`<div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">AC · Total Delivery</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+      delAcRanked.forEach((s,i)=>{
+        const val='₱'+s.ac.toLocaleString();
+        const cl=s.ac>=400?'var(--green)':s.ac>=300?'var(--text)':'var(--amber)';
+        html+=rankRow(rankBadge(i),s.name,val,cl,'');
+      });
+      html+=`</div></div>`;
+    }
 
     html+=`</div>`; // close grid
   }
@@ -2722,9 +2874,13 @@ function renderTCAC(){
 
   const rows=BRANCHES.map(b=>{
     const s=submissions.find(sub=>sub.branch===b.code&&sub.date===viewDate);
-    if(!s)return`<tr><td colspan="11" style="color:var(--muted);font-size:12px;text-align:center;padding:12px"><span class="b-code">${b.code}</span> ${b.name} — no data</td></tr>`;
+    if(!s)return`<tr><td colspan="12" style="color:var(--muted);font-size:12px;text-align:center;padding:12px"><span class="b-code">${b.code}</span> ${b.name} — no data</td></tr>`;
     const tc=pfn(s.tc)||0;                       // Total TC for this branch
     const nsAC=pfn(s.ac)||null;                  // AC from Viber message (TSLE÷TC)
+    // Regular Sales: AC = regSales / regTc (computed here, never guessed)
+    const regSales=pfn(s.regSales)||0;
+    const regTc=pfn(s.regTc)||0;
+    const regAC=(regSales>0&&regTc>0)?(regSales/regTc):null;
     return`<tr>
       <td><span class="b-code">${b.code}</span><span style="color:var(--muted);font-size:11px;margin-left:6px">${b.name}</span></td>
       <td style="text-align:right;${mono}font-weight:700;font-size:14px">${tc>0?tc.toLocaleString():'—'}</td>
@@ -2732,6 +2888,7 @@ function renderTCAC(){
         <div style="${mono}font-size:12px">${fmtSales(s.nsales)}</div>
         <div style="font-size:11px;${acCls(nsAC,b.code)}">${nsAC!=null?'AC '+fmtAC(nsAC):'AC — (no TC)'}</div>
       </td>
+      <td style="text-align:right">${regSales>0?(`<div style="${mono}font-size:12px">${fmtSales(regSales)}</div>`+`<div style="font-size:11px;color:var(--muted)">TC ${regTc>0?regTc.toLocaleString():'—'}</div>`+`<div style="font-size:11px;${acCls(regAC,b.code)}">${regAC!=null?'AC '+fmtAC(regAC):'TC missing'}</div>`):'<span style="color:#C7C7CC">—</span>'}</td>
       <td style="text-align:right">${chCell(s.dthru,s.dthruTc)}</td>
       <td style="text-align:right">${chCell(s.grab,s.grabTc)}</td>
       <td style="text-align:right">${chCell(s.fpanda,s.fpandaTc)}</td>
@@ -2749,47 +2906,107 @@ function renderTCAC(){
   const ym=viewDate.substring(0,7);
   const mtdSubs=submissions.filter(s=>s.date&&s.date.startsWith(ym));
 
-  // per-branch MTD breakdown
-  const branchRows=BRANCHES.map(b=>{
+  // ── New rankings: TSLE / Reg NSales / DT / Total Delivery — TC + AC averaged across MTD ──
+  // Formulas (confirmed):
+  //   AC = Sales ÷ TC
+  //   Total Delivery Sales = Grab + FPanda + JB Del
+  //   Total Delivery TC    = grabTc + fpandaTc + jbdelTc
+  // Avg TC for each metric = avg of daily TCs across days where that TC>0
+  // Avg AC for each metric = avg of daily ACs (each day computed as Sales÷TC) across days where TC>0 and Sales>0
+
+  const fmtMoney=v=>v==null?'—':'₱'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const fmtTC=v=>v==null?'—':Math.round(v).toLocaleString();
+
+  // Build per-branch metric record
+  const recs=BRANCHES.map(b=>{
     const bs=mtdSubs.filter(s=>s.branch===b.code);
-    if(!bs.length)return`<tr><td><span class="b-code">${b.code}</span></td><td colspan="8" style="color:var(--muted);font-size:11px">No data</td></tr>`;
+    if(!bs.length)return{b,empty:true};
+
+    // TSLE TC (= total branch TC). TSLE AC uses parsed s.ac (TSLE÷TC from Viber).
     const tcDays=bs.filter(s=>pfn(s.tc)>0);
-    const avgTC=tcDays.length?Math.round(tcDays.reduce((a,s)=>a+pfn(s.tc),0)/tcDays.length):null;
-    const acArr=bs.filter(s=>pfn(s.ac)>0).map(s=>pfn(s.ac));
-    const avgAC=acArr.length?(acArr.reduce((a,v)=>a+v,0)/acArr.length):null;
-    // per-channel avg AC = channel sales ÷ channel's own TC
-    const chMTD=(sKey,tcKey)=>{
-      const v=bs.filter(s=>s[sKey]>0&&pfn(s[tcKey])>0);
-      if(!v.length)return'—';
-      const avg=(v.reduce((a,s)=>a+(s[sKey]/pfn(s[tcKey])),0)/v.length).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-      return`<span style="${acCls(parseFloat(avg))}">₱${avg}</span>`;
-    };
+    const tsleTC=tcDays.length?(tcDays.reduce((a,s)=>a+pfn(s.tc),0)/tcDays.length):null;
+    const tsleAcDays=bs.filter(s=>pfn(s.ac)>0);
+    const tsleAC=tsleAcDays.length?(tsleAcDays.reduce((a,s)=>a+pfn(s.ac),0)/tsleAcDays.length):null;
+
+    // Reg NSales TC + AC (AC = regSales÷regTc, computed per day, then averaged)
+    const regTcDays=bs.filter(s=>pfn(s.regTc)>0);
+    const regTC=regTcDays.length?(regTcDays.reduce((a,s)=>a+pfn(s.regTc),0)/regTcDays.length):null;
+    const regAcDays=bs.filter(s=>pfn(s.regSales)>0&&pfn(s.regTc)>0);
+    const regAC=regAcDays.length?(regAcDays.reduce((a,s)=>a+(pfn(s.regSales)/pfn(s.regTc)),0)/regAcDays.length):null;
+
+    // Drive Thru TC + AC
+    const dtTcDays=bs.filter(s=>pfn(s.dthruTc)>0);
+    const dtTC=dtTcDays.length?(dtTcDays.reduce((a,s)=>a+pfn(s.dthruTc),0)/dtTcDays.length):null;
+    const dtAcDays=bs.filter(s=>pfn(s.dthru)>0&&pfn(s.dthruTc)>0);
+    const dtAC=dtAcDays.length?(dtAcDays.reduce((a,s)=>a+(pfn(s.dthru)/pfn(s.dthruTc)),0)/dtAcDays.length):null;
+
+    // Total Delivery (Grab + FPanda + JB Del)
+    const delTcDays=bs.filter(s=>(pfn(s.grabTc)+pfn(s.fpandaTc)+pfn(s.jbdelTc))>0);
+    const delTC=delTcDays.length?(delTcDays.reduce((a,s)=>a+(pfn(s.grabTc)+pfn(s.fpandaTc)+pfn(s.jbdelTc)),0)/delTcDays.length):null;
+    const delAcDays=bs.filter(s=>{
+      const sales=pfn(s.grab)+pfn(s.fpanda)+pfn(s.jbdel);
+      const tc=pfn(s.grabTc)+pfn(s.fpandaTc)+pfn(s.jbdelTc);
+      return sales>0&&tc>0;
+    });
+    const delAC=delAcDays.length?(delAcDays.reduce((a,s)=>{
+      const sales=pfn(s.grab)+pfn(s.fpanda)+pfn(s.jbdel);
+      const tc=pfn(s.grabTc)+pfn(s.fpandaTc)+pfn(s.jbdelTc);
+      return a+(sales/tc);
+    },0)/delAcDays.length):null;
+
+    return{b,empty:false,tsleTC,tsleAC,regTC,regAC,dtTC,dtAC,delTC,delAC};
+  });
+
+  // Rank helper: returns 1-based rank (highest value = 1). Nulls excluded.
+  const rankOf=(metric)=>{
+    const vals=recs.filter(r=>!r.empty&&r[metric]!=null).map(r=>({code:r.b.code,v:r[metric]}));
+    vals.sort((a,b)=>b.v-a.v);
+    const map={};vals.forEach((x,i)=>map[x.code]=i+1);
+    return map;
+  };
+  const ranks={
+    tsleTC:rankOf('tsleTC'),tsleAC:rankOf('tsleAC'),
+    regTC:rankOf('regTC'),regAC:rankOf('regAC'),
+    dtTC:rankOf('dtTC'),dtAC:rankOf('dtAC'),
+    delTC:rankOf('delTC'),delAC:rankOf('delAC'),
+  };
+  const rankBadge=(code,key)=>{
+    const r=ranks[key][code];if(!r)return'';
+    const bg=r===1?'var(--green)':r===5?'var(--red)':'#8E8E93';
+    return`<span style="display:inline-block;font-size:9px;background:${bg};color:#fff;border-radius:8px;padding:1px 6px;margin-left:4px;font-weight:700;font-family:-apple-system">#${r}</span>`;
+  };
+
+  const branchRows=recs.map(r=>{
+    if(r.empty)return`<tr><td><span class="b-code">${r.b.code}</span></td><td colspan="8" style="color:var(--muted);font-size:11px">No data</td></tr>`;
+    const cell=(val,fmt,key)=>`<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px">${fmt(val)}${val!=null?rankBadge(r.b.code,key):''}</td>`;
     return`<tr>
-      <td><span class="b-code">${b.code}</span></td>
-      <td style="text-align:right;font-family:'JetBrains Mono',monospace">${bs.filter(s=>s.tc>0).length?avgTC.toLocaleString():'—'}</td>
-      <td style="text-align:right;font-family:'JetBrains Mono',monospace;${acCls(avgAC)}">${avgAC?'₱'+avgAC.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—'}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('dthru','dthruTc')}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('grab','grabTc')}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('fpanda','fpandaTc')}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('jbdel','jbdelTc')}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('jkp','jkpTc')}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('bos','bosTc')}</td>
-      <td style="text-align:right;font-size:12px">${(()=>{const v=bs.filter(s=>s.emd>0);if(!v.length)return'—';const avg=(v.reduce((a,s)=>a+s.emd,0)/v.length);return'<span style="font-family:\'JetBrains Mono\',monospace">₱'+(avg/1000).toFixed(0)+'k</span>';})()}</td>
-      <td style="text-align:right;font-size:12px">${chMTD('sec','secTc')}</td>
+      <td><span class="b-code">${r.b.code}</span></td>
+      ${cell(r.tsleTC,fmtTC,'tsleTC')}
+      ${cell(r.tsleAC,fmtMoney,'tsleAC')}
+      ${cell(r.regTC,fmtTC,'regTC')}
+      ${cell(r.regAC,fmtMoney,'regAC')}
+      ${cell(r.dtTC,fmtTC,'dtTC')}
+      ${cell(r.dtAC,fmtMoney,'dtAC')}
+      ${cell(r.delTC,fmtTC,'delTC')}
+      ${cell(r.delAC,fmtMoney,'delAC')}
     </tr>`;
   }).join('');
 
-  // overall MTD pill summary
+  // overall MTD pill summary (TSLE AC overall)
   const allAC=mtdSubs.filter(s=>pfn(s.ac)>0).map(s=>pfn(s.ac));
   const overallAC=allAC.length?(allAC.reduce((a,v)=>a+v,0)/allAC.length):null;
-  if(mtdPill)mtdPill.textContent=overallAC?`Overall avg AC: ₱${overallAC.toLocaleString()} (${ym})`:`(${ym} — no data)`;
+  if(mtdPill)mtdPill.textContent=overallAC?`Overall TSLE AC: ₱${overallAC.toLocaleString()} (${ym})`:`(${ym} — no data)`;
 
   if(mtdEl)mtdEl.innerHTML=`<table class="tbl" style="font-size:12px"><thead><tr>
-    <th>Branch</th><th style="text-align:right">Avg TC</th><th style="text-align:right">Avg AC</th>
-    <th style="text-align:right">DThru AC</th><th style="text-align:right">Grab AC</th>
-    <th style="text-align:right">FPanda AC</th><th style="text-align:right">JB Del AC</th>
-    <th style="text-align:right">JKP AC</th><th style="text-align:right">BOS AC</th>
-    <th style="text-align:right">EMD Avg</th><th style="text-align:right">2nd TC AC</th>
+    <th>Branch</th>
+    <th style="text-align:right">TSLE TC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">TSLE AC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">Reg NSales TC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">Reg NSales AC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">DT TC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">DT AC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">avg</span></th>
+    <th style="text-align:right">Total Delivery TC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Grab+FPanda+JB Del</span></th>
+    <th style="text-align:right">Total Delivery AC<span style="font-size:9px;display:block;font-weight:400;opacity:.6">Grab+FPanda+JB Del</span></th>
   </tr></thead><tbody>${branchRows}</tbody></table>`;
 }
 
