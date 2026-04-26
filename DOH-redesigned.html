@@ -1062,6 +1062,16 @@ const NPS_TARGET=75, OSAT_TARGET=4.0;
 const NPS_PROMOTER=75, NPS_DETRACTOR=50; // 0-50=detractor, 51-74=passive, 75-100=promoter
 const today=new Date().toISOString().split('T')[0];
 
+// QBR branch patterns for Qualtrics OCR matching — declared early so render calls below can't crash before it's assigned
+var QBR=[
+  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fernando|sumulong/i},
+  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina\s*bayan|shoe\s*ave/i},
+  {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
+  {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
+  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway\s*2?0+0/i}
+];
+var qltData={};
+
 // targets structure: targets[branchCode][YYYY-MM] = {pct,ly,monthly,foodMax,laborMax,acMin,tcMin}
 let targets=JSON.parse(localStorage.getItem('jb_tgt3')||'{}');
 const _currentYM=new Date().toISOString().slice(0,7);
@@ -2396,26 +2406,6 @@ function generateAnalysis(){
     html+=`</div>`;
 
 
-    // ── SECTION 4: NPS Score (last) ──
-    html+=`<div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">NPS Performance</div>`;
-    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px;">`;
-    const npsRanked2=BRANCHES.map(b=>{
-      const e=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date))[0]||null;
-      return{name:b.name,nps:e?e.nps:null,osat:e?e.osat:null,ltret:e?e.ltret:null,comp:e?e.complaints:null};
-    }).sort((a,b)=>{
-      if(a.nps!==null&&b.nps!==null)return b.nps-a.nps;
-      if(a.nps!==null)return -1;if(b.nps!==null)return 1;return 0;
-    });
-    html+=`<div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">NPS Score <span style="font-weight:400;opacity:.6">(target ≥75)</span></div>
-      <div style="display:flex;flex-direction:column;gap:4px;">`;
-    npsRanked2.forEach((b,i)=>{
-            const val=b.nps!==null?('NPS '+b.nps+'  OSAT '+(b.osat||'—')+'  Comp '+(b.comp!==null?b.comp:'—')):'No data';
-      const cl=b.nps===null?'var(--muted)':b.nps>=75?'var(--green)':b.nps>=60?'var(--amber)':'var(--red)';
-      const flag=b.nps!==null&&b.nps<75?'BELOW TARGET':'';
-      html+=rankRow(rankBadge(i),b.name,val,cl,flag);
-    });
-    html+=`</div></div>`;
 
   body.innerHTML=html;
 }
@@ -3667,14 +3657,7 @@ async function syncNPSFromSheet(){
 }
 
 // ── QUALTRICS SCREENSHOT OCR ─────────────────────────────
-var QBR=[
-  {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fernando|sumulong/i},
-  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina\s*bayan|shoe\s*ave/i},
-  {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
-  {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
-  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway\s*2?0+0/i}
-];
-var qltData={};
+// QBR and qltData declared at top of script near BRANCHES — see line ~1066
 
 function handleQltPaste(e){
   e.preventDefault();
@@ -3715,20 +3698,24 @@ function runQltOCR(url){
     fill.style.width='100%';
     msg.textContent='Done. Parsing data...';
     setTimeout(function(){bar.style.display='none';},800);
-    parseQltText(result.data.text);
+    var txt=(result&&result.data&&result.data.text)?result.data.text:(result&&result.text?result.text:'');
+    if(!txt){document.getElementById('qlt-status').textContent='OCR returned no text. Try a clearer screenshot.';return;}
+    try{parseQltText(txt);}catch(pe){document.getElementById('qlt-status').textContent='Parse error: '+pe.message;console.error('parseQltText error:',pe);}
   }).catch(function(err){
     bar.style.display='none';
-    document.getElementById('qlt-status').textContent='OCR error: '+err.message;
+    document.getElementById('qlt-status').textContent='OCR error: '+(err&&err.message?err.message:String(err));
   });
 }
 
 function parseQltText(raw){
-  var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
-  qltData={};
+  var _step='init';
+  try{
+  _step='split'; var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
+  _step='qltData init'; qltData={};
   // Merge consecutive lines belonging to same branch
-  var merged=[];
+  _step='merge'; var merged=[];
   for(var i=0;i<lines.length;i++){
-    var bc=matchBranch(lines[i]);
+    _step='matchBranch line '+i; var bc=matchBranch(lines[i]);
     if(bc){
       var row=lines[i];
       while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
@@ -3771,11 +3758,12 @@ function parseQltText(raw){
     if(variances[3]!==undefined)e.ltretVar=variances[3];
     qltData[bc]=e;
   });
-  if(!Object.keys(qltData).length){
+  _step='check results'; if(!Object.keys(qltData).length){
     document.getElementById('qlt-status').textContent='Could not detect branch data — ensure store codes/names are visible in screenshot.';
     return;
   }
-  renderQltGrid();
+  _step='renderQltGrid'; renderQltGrid();
+  }catch(e){document.getElementById('qlt-status').textContent='Error at ['+_step+']: '+e.message;console.error('parseQltText step='+_step,e);}
 }
 
 function matchBranch(line){
