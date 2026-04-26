@@ -1418,14 +1418,18 @@ function parseViber(txt){
   const bosD=gnChFull(/\*?BOS\*?\s*:\s*([\d.,k]+)/i);
   const emdSales=gn(/\*?EMD\s*(?:NSales)?\*?\s*:\s*([\d.,k]+)/i);  // EMD: sales only, no TC
   const secD=gnChFull(/\*?2nd\s*TC\s*(?:NSales)?\*?\s*:\s*([\d.,k]+)/i);
+  // Regular Sales — use gnChFull to capture TC on same line (e.g. "Reg NSales: 108k TC: 431")
+  // Fallback: separate "Reg TC: 431" line if TC not on same line as sales
+  const regD=gnChFull(/\*?Reg(?:ular)?\s*N?Sales\*?\s*:\s*([\d.,k]+)/i);
+  const regTcFallback=(()=>{const m=txt.match(/(?:Reg(?:ular)?\s*TC)\s*:\s*([\d,]+)/i);return m?parseInt(m[1].replace(/,/g,'')):0;})();
   return {
     mod:g(/MOD:\s*(.+)/i,'—'),
     date:g(/(\w+ \d+,\s*\d{4})/,''),
     nsales:gn(/NSales:\s*([\d.,k]+)/i),
     tsle:gn(/TSLE:\s*([\d.,k]+)/i),
-    // Regular Sales (in-store sales) — Sales line + dedicated TC line. AC = regSales / regTc
-    regSales:gn(/(?:Reg(?:ular)?\s*N?Sales)\s*:\s*([\d.,k]+)/i),
-    regTc:(()=>{const m=txt.match(/(?:Reg(?:ular)?\s*TC)\s*:\s*([\d,]+)/i);return m?parseInt(m[1].replace(/,/g,'')):0;})(),
+    // Regular Sales (in-store sales) — gnChFull captures sales + TC from same/next line
+    regSales:regD.sales||0,
+    regTc:regD.tc||regTcFallback||0,
     tc:(()=>{
       // try start-of-line first, then anywhere in message
       const m=txt.match(/^TC[:\s]+(\d[\d,]*)/m)||txt.match(/\bTC[:\s]+(\d[\d,]*)/i);
@@ -1901,8 +1905,10 @@ function generateAnalysis(){
           const regSales=Math.round(bs.reduce((a,s)=>a+(s.regSales||0),0)/days);
           const regTc=Math.round(bs.reduce((a,s)=>a+(parseInt(s.regTc)||0),0)/days);
           const _avg=(key)=>{const vb=bs.filter(s=>s[key]>0);return vb.length?Math.round(vb.reduce((a,s2)=>a+s2[key],0)/vb.length):0;};
-          const dthruTc=_avg('dthruTc'),bosTc=_avg('bosTc'),grabTc=_avg('grabTc'),fpandaTc=_avg('fpandaTc'),jbdelTc=_avg('jbdelTc'),jkpTc=_avg('jkpTc');
-          return{branch:b.code,nsales,food,lc,kwh,watermain,dthru,grab,fpanda,jbdel,jkp,bos,lpg,mod,date:viewDate,tc,regSales,regTc,dthruTc,bosTc,grabTc,fpandaTc,jbdelTc,jkpTc};
+          const emd=Math.round(bs.reduce((a,s)=>a+(s.emd||0),0)/days);
+          const sec=Math.round(bs.reduce((a,s)=>a+(s.sec||0),0)/days);
+          const dthruTc=_avg('dthruTc'),bosTc=_avg('bosTc'),grabTc=_avg('grabTc'),fpandaTc=_avg('fpandaTc'),jbdelTc=_avg('jbdelTc'),jkpTc=_avg('jkpTc'),secTc=_avg('secTc');
+          return{branch:b.code,nsales,food,lc,kwh,watermain,dthru,grab,fpanda,jbdel,jkp,bos,emd,sec,lpg,mod,date:viewDate,tc,regSales,regTc,dthruTc,bosTc,grabTc,fpandaTc,jbdelTc,jkpTc,secTc};
         }).filter(Boolean);
       })()
     : submissions.filter(s=>s.date===viewDate);
@@ -2096,6 +2102,22 @@ function generateAnalysis(){
       html+=`</div></div>`;
     }
 
+    // ── SECTION 1.6: EMD Sales Ranking (sales only — no TC) ──
+    const emdRanked=activeSubs.map(s=>{
+      const b=BRANCHES.find(x=>x.code===s.branch);
+      const sales=Number(s.emd)||0;
+      return{name:b?b.name:s.branch,sales,noData:!sales};
+    }).filter(x=>!x.noData).sort((a,b)=>b.sales-a.sales);
+    if(emdRanked.length>0){
+      html+=`<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">🏷️ EMD Sales</div>`;
+      html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;"><div>`;
+      html+=`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">EMD Sales</div>`;
+      html+=`<div style="display:flex;flex-direction:column;gap:4px;">`;
+      emdRanked.forEach((s,i)=>{
+        html+=rankRow(rankBadge(i),s.name,'₱'+s.sales.toLocaleString(),'var(--text)','');
+      });
+      html+=`</div></div></div></div>`;
+    }
 
     // ── SECTION 2: Transaction & Average Check Rankings ──
     // Layout: Row 1 = all TC columns | Row 2 = all AC columns
