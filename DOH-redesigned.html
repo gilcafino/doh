@@ -1048,7 +1048,7 @@ var QBR=[
   {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|bayan|shoe/i},
   {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
   {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
-  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway|hwy\s*2/i}
+  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|h[il1]ghway|hwy/i}
 ];
 var qltData={};
 
@@ -1111,10 +1111,13 @@ const _npsPreload=[
   {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
 ];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
-// Merge: preload + any additional stored entries
-const _npsMerged=_npsPreload.slice();
+// Merge: preload + stored entries — stored data wins over null preload values
+// FIX: previously only added entries not in preload, so JB3753 Apr 2026 (null preload) blocked saved real data
+const _npsMerged=_npsPreload.map(function(p){return Object.assign({},p);});
 _npsStored.forEach(function(s){
-  if(!_npsMerged.find(function(p){return p.branch===s.branch&&p.period===s.period;}))_npsMerged.push(s);
+  var idx=_npsMerged.findIndex(function(p){return p.branch===s.branch&&p.period===s.period;});
+  if(idx===-1){_npsMerged.push(s);}
+  else{Object.keys(s).forEach(function(k){if(s[k]!==null&&s[k]!==undefined)_npsMerged[idx][k]=s[k];});}
 });
 let npsManual=_npsMerged;
 try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
@@ -3626,6 +3629,9 @@ function parseQltText(raw){
     var bc=m.bc, row=m.row;
     // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
     var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
+    // FIX: "Highway 2000" has "2000" in the store name — strip the phrase before number extraction
+    // so the name number doesn't shift count columns (npsCount, osatCount, ltretCount)
+    dataRow=dataRow.replace(/h[il1]ghway\s*2000/gi,' ').replace(/h[il1]ghway/gi,' ');
     // Normalize comma-formatted numbers: "1,165" → "1165"
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
     // Extract numbers including leading-dot decimals like .02
