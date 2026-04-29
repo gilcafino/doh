@@ -1111,7 +1111,7 @@ const _npsPreload=[
   {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
 ];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
-// Merge: preload + stored — stored non-null values WIN over null preload (FIX: was blocking HW2000 & stale data)
+// Merge: stored non-null values WIN over null preload (FIX1: was blocking HW2000 & Marikina stale data)
 const _npsMerged=_npsPreload.map(function(p){return Object.assign({},p);});
 _npsStored.forEach(function(s){
   var idx=_npsMerged.findIndex(function(p){return p.branch===s.branch&&p.period===s.period;});
@@ -3618,8 +3618,7 @@ function parseQltText(raw){
     }
     if(bc){
       var row=startLine;
-      // FIX: allow up to 3 short non-digit lines (e.g. "Shoe Ave" after "Marikina Bayan/")
-      // before the actual data line — prevents multi-line store names from blocking data collection
+      // FIX4: allow up to 3 short non-digit lines (e.g. "Shoe Ave" after "Marikina Bayan/")
       var skipBudget=3;
       while(i+1<lines.length && !matchBranch(lines[i+1])){
         if(/\d/.test(lines[i+1])&&lines[i+1].length<120){
@@ -3635,9 +3634,9 @@ function parseQltText(raw){
     var bc=m.bc, row=m.row;
     // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
     var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
-    // FIX: strip store name text that contains numbers — "Highway 2000" has "2000", "Shoe Ave" is harmless
+    // FIX2: strip store name words that contain numbers (Highway 2000) or are pure text noise
     dataRow=dataRow.replace(/h[il1]ghway\s*2000/gi,' ').replace(/h[il1]ghway/gi,' ');
-    dataRow=dataRow.replace(/shoe\s*ave/gi,' ').replace(/marikina/gi,' ').replace(/sumulong/gi,' ');
+    dataRow=dataRow.replace(/shoe\s*ave/gi,' ').replace(/sumulong/gi,' ');
     // Normalize comma-formatted numbers: "1,165" → "1165"
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
     // Extract numbers including leading-dot decimals like .02
@@ -3661,11 +3660,15 @@ function parseQltText(raw){
     var existing=qltData[bc];
     if(existing && existing._score >= counts.length+npsScores.length+osatScores.length) return;
     var def=function(arr,i){return arr[i]!==undefined?arr[i]:null;};
+    // FIX5: NPS and OSAT Top2 Box are both 50-100 — OCR order unreliable for Marikina Bayan row
+    // NPS is always < OSAT Top2 Box in JB data → use Math.min for NPS, Math.max for Top2
+    var npsVal=npsScores.length?Math.min.apply(null,npsScores):null;
+    var top2Val=npsScores.length>1?Math.max.apply(null,npsScores):null;
     var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
            _score:counts.length+npsScores.length+osatScores.length,
-           npsCount:def(counts,0), nps:def(npsScores,0), npsVar:def(variances,0),
-           osatCount:def(counts,1), osatTop2:null,
+           npsCount:def(counts,0), nps:npsVal, npsVar:def(variances,0),
+           osatCount:def(counts,1), osatTop2:top2Val,
            osat:def(osatScores,0), osatVar:def(variances,1),
            nft:def(nftScores,0), nftVar:def(variances,2),
            ltretCount:def(counts,2), ltret:def(osatScores,1), ltretVar:def(variances,3)};
