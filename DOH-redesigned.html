@@ -1111,8 +1111,7 @@ const _npsPreload=[
   {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
 ];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
-// Merge: preload + stored entries — stored data wins over null preload values
-// FIX: previously only added entries not in preload, so JB3753 Apr 2026 (null preload) blocked saved real data
+// Merge: preload + stored — stored non-null values WIN over null preload (FIX: was blocking HW2000 & stale data)
 const _npsMerged=_npsPreload.map(function(p){return Object.assign({},p);});
 _npsStored.forEach(function(s){
   var idx=_npsMerged.findIndex(function(p){return p.branch===s.branch&&p.period===s.period;});
@@ -3619,8 +3618,15 @@ function parseQltText(raw){
     }
     if(bc){
       var row=startLine;
-      while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
-        i++; row+=' '+lines[i];
+      // FIX: allow up to 3 short non-digit lines (e.g. "Shoe Ave" after "Marikina Bayan/")
+      // before the actual data line — prevents multi-line store names from blocking data collection
+      var skipBudget=3;
+      while(i+1<lines.length && !matchBranch(lines[i+1])){
+        if(/\d/.test(lines[i+1])&&lines[i+1].length<120){
+          i++; row+=' '+lines[i]; skipBudget=3;
+        } else if(skipBudget>0&&lines[i+1].length<80){
+          i++; skipBudget--;
+        } else { break; }
       }
       merged.push({bc:bc,row:row});
     }
@@ -3629,9 +3635,9 @@ function parseQltText(raw){
     var bc=m.bc, row=m.row;
     // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
     var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
-    // FIX: "Highway 2000" has "2000" in the store name — strip the phrase before number extraction
-    // so the name number doesn't shift count columns (npsCount, osatCount, ltretCount)
+    // FIX: strip store name text that contains numbers — "Highway 2000" has "2000", "Shoe Ave" is harmless
     dataRow=dataRow.replace(/h[il1]ghway\s*2000/gi,' ').replace(/h[il1]ghway/gi,' ');
+    dataRow=dataRow.replace(/shoe\s*ave/gi,' ').replace(/marikina/gi,' ').replace(/sumulong/gi,' ');
     // Normalize comma-formatted numbers: "1,165" → "1165"
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
     // Extract numbers including leading-dot decimals like .02
