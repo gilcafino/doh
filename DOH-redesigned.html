@@ -259,7 +259,7 @@ select.trk-inp{cursor:pointer;}
       <div class="hdr-date" id="dateline">--</div>
     </div>
     <button class="tgt-btn" onclick="openModal()">Targets ✎</button>
-    <button class="refresh-hdr" onclick="syncFromSheet(false)" style="background:#30D158;margin-right:6px;">⇄ Sync</button><button class="refresh-hdr" id="gmail-btn" onclick="loadGmailVOC()">↻ Load Gmail VOC</button>
+    <button class="refresh-hdr" onclick="openSyncModal()" style="background:#30D158;margin-right:6px;">⇄ Sync</button><button class="refresh-hdr" id="gmail-btn" onclick="loadGmailVOC()">↻ Load Gmail VOC</button>
   </div>
 </div>
 
@@ -307,6 +307,10 @@ select.trk-inp{cursor:pointer;}
         <button onclick="exportSyncData()" style="padding:10px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-right:8px;">📋 Copy to Clipboard</button>
         <button onclick="downloadSyncData()" style="padding:10px 14px;background:var(--gray-s);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 Download File</button>
         <span id="sync-export-status" style="font-size:12px;color:var(--green);margin-left:10px;"></span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding:10px 0;margin-bottom:8px;">
+        <button onclick="syncFromSheet(false);closeSyncModal();" style="padding:8px 14px;background:#30D158;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">⇄ Pull from Google Sheets</button>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px;">Fetches latest submissions and NPS from your shared sheets.</span>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px;">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Import (paste JSON below):</div>
