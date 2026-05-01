@@ -3623,41 +3623,37 @@ function parseQltText(raw){
       merged.push({bc:bc,row:row});
     }
   }
+  // Build map of digit-bearing parts of branch names (e.g. "Highway 2000" → 2000) so we can strip them per-row.
+  var nameDigits={};
+  QBR.forEach(function(q){var dm=(q.name||'').match(/\b(\d+)\b/);if(dm)nameDigits[q.code]=new RegExp('\\b'+dm[1]+'\\b','g');});
   merged.forEach(function(m){
     var bc=m.bc, row=m.row;
     // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
     var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
     // Normalize comma-formatted numbers: "1,165" → "1165"
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
+    // Strip store-name tokens — letter-led words including digits ATTACHED (no space) like "C6". Then strip standalone digit suffixes like "2000" from "Highway 2000".
+    dataRow=dataRow.replace(/[a-zA-Z][a-zA-Z\/]*\d*/g,' ');
+    if(nameDigits[bc])dataRow=dataRow.replace(nameDigits[bc],' ');
     // Extract numbers including leading-dot decimals like .02
     var nums=(dataRow.match(/-?\.?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
-    // Remove any residual store code numbers
-    nums=nums.filter(function(n){return![3353,3595,3702,87,3753,88].includes(Math.abs(n));});
-    // Column layout (Qualtrics Store/Restaurant/Cafe Summary):
-    // NPS Count | NPS | NPS Var | OSAT Count | OSAT Top2Box% | OSAT | OSAT Var | NFT Score | NFT Var | LtRet Count | LtRet Score | LtRet Var
-    var counts=[], npsScores=[], osatScores=[], nftScores=[], variances=[];
-    nums.forEach(function(n){
-      var abs=Math.abs(n);
-      if(n===Math.floor(n)&&abs>10&&abs<5000) counts.push(n);          // response counts (large int)
-      else if(abs>=50&&abs<=100) npsScores.push(n);                     // NPS / Top2Box (50-100)
-      else if(n>0&&abs>=3.5&&abs<=5.5) osatScores.push(n);             // OSAT/LtRet — positive only (negatives are variances)
-      else if(n>0&&abs<3.5) nftScores.push(n);                         // NFT score (0-3.5, positive)
-      else if(n!==Math.floor(n)) variances.push(n);                    // decimals not caught above = variances
-    });
-    // Skip rows with no meaningful data — prevents split-name lines (e.g. "Sumulong Hiway") from overwriting real data
-    if(!counts.length && !npsScores.length && !osatScores.length) return;
-    // Also skip if this branch already has better data (more values)
+    // POSITIONAL MAPPING — take values exactly as the Qualtrics column order shows them.
+    // No bucketed classification (size-range guessing scrambles columns when data crosses ranges).
+    // Qualtrics Store/Restaurant/Cafe Summary column order:
+    // [0]NPS Count [1]NPS [2]NPS Var [3]OSAT Count [4]OSAT Top2Box% [5]OSAT [6]OSAT Var [7]NFT Score [8]NFT Var [9]LtRet Count [10]LtRet Score [11]LtRet Var
+    if(nums.length<3) return; // not enough data — skip empty/garbage rows
+    // Skip if this branch already has more values from another row match
     var existing=qltData[bc];
-    if(existing && existing._score >= counts.length+npsScores.length+osatScores.length) return;
-    var def=function(arr,i){return arr[i]!==undefined?arr[i]:null;};
+    if(existing && existing._score >= nums.length) return;
+    var def=function(i){return nums[i]!==undefined?nums[i]:null;};
     var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
-           _score:counts.length+npsScores.length+osatScores.length,
-           npsCount:def(counts,0), nps:def(npsScores,0), npsVar:def(variances,0),
-           osatCount:def(counts,1), osatTop2:null,
-           osat:def(osatScores,0), osatVar:def(variances,1),
-           nft:def(nftScores,0), nftVar:def(variances,2),
-           ltretCount:def(counts,2), ltret:def(osatScores,1), ltretVar:def(variances,3)};
+           _score:nums.length,
+           npsCount:def(0), nps:def(1), npsVar:def(2),
+           osatCount:def(3), osatTop2:def(4),
+           osat:def(5), osatVar:def(6),
+           nft:def(7), nftVar:def(8),
+           ltretCount:def(9), ltret:def(10), ltretVar:def(11)};
     qltData[bc]=e;
   });
   _step='check results'; if(!Object.keys(qltData).length){
