@@ -1029,12 +1029,13 @@ select.trk-inp{cursor:pointer;}
 // Safe number parser — strips commas before parseFloat (handles "1,766" → 1766)
 const pfn=v=>parseFloat(String(v).replace(/,/g,''))||0;
 
+// Branch order: 3353, 3595, 3702, 3753, 87 (matches Qualtrics standard sort)
 const BRANCHES=[
   {code:'JB3353',name:'Gil Fernando',  region:'Rizal', laborMax:9.5},
-  {code:'JB0087',name:'Marikina Bayan',region:'NCR',   laborMax:11.5},
   {code:'JB3595',name:'Ejercito',      region:'Rizal', laborMax:9.5},
   {code:'JB3702',name:'Marilaque',     region:'Rizal', laborMax:9.5},
   {code:'JB3753',name:'Highway 2000',  region:'Rizal', laborMax:9.5},
+  {code:'JB0087',name:'Marikina Bayan',region:'NCR',   laborMax:11.5},
 ];
 const FOOD_MAX=41;
 const KWH_MAX=1800, WATER_MAX=15;
@@ -1045,10 +1046,10 @@ const today=new Date().toISOString().split('T')[0];
 // QBR branch patterns for Qualtrics OCR matching — declared early so render calls below can't crash before it's assigned
 var QBR=[
   {code:'JB3353',key:'3353',name:'Gil Fernando',    pat:/3353|gil\s*fern/i},
-  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|bayan|shoe/i},
   {code:'JB3595',key:'3595',name:'Ejercito',        pat:/3595|ejercito/i},
   {code:'JB3702',key:'3702',name:'Marilaque',       pat:/3702|marilaque/i},
-  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|h[il1]ghway|hwy/i}
+  {code:'JB3753',key:'3753',name:'Highway 2000',    pat:/3753|highway|hwy\s*2/i},
+  {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|bayan|shoe/i}
 ];
 var qltData={};
 
@@ -1111,12 +1112,10 @@ const _npsPreload=[
   {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
 ];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
-// Merge: stored non-null values WIN over null preload (FIX1: was blocking HW2000 & Marikina stale data)
-const _npsMerged=_npsPreload.map(function(p){return Object.assign({},p);});
+// Merge: preload + any additional stored entries
+const _npsMerged=_npsPreload.slice();
 _npsStored.forEach(function(s){
-  var idx=_npsMerged.findIndex(function(p){return p.branch===s.branch&&p.period===s.period;});
-  if(idx===-1){_npsMerged.push(s);}
-  else{Object.keys(s).forEach(function(k){if(s[k]!==null&&s[k]!==undefined)_npsMerged[idx][k]=s[k];});}
+  if(!_npsMerged.find(function(p){return p.branch===s.branch&&p.period===s.period;}))_npsMerged.push(s);
 });
 let npsManual=_npsMerged;
 try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
@@ -3618,14 +3617,8 @@ function parseQltText(raw){
     }
     if(bc){
       var row=startLine;
-      // FIX4: allow up to 3 short non-digit lines (e.g. "Shoe Ave" after "Marikina Bayan/")
-      var skipBudget=3;
-      while(i+1<lines.length && !matchBranch(lines[i+1])){
-        if(/\d/.test(lines[i+1])&&lines[i+1].length<120){
-          i++; row+=' '+lines[i]; skipBudget=3;
-        } else if(skipBudget>0&&lines[i+1].length<80){
-          i++; skipBudget--;
-        } else { break; }
+      while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
+        i++; row+=' '+lines[i];
       }
       merged.push({bc:bc,row:row});
     }
@@ -3634,9 +3627,6 @@ function parseQltText(raw){
     var bc=m.bc, row=m.row;
     // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
     var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
-    // FIX2: strip store name words that contain numbers (Highway 2000) or are pure text noise
-    dataRow=dataRow.replace(/h[il1]ghway\s*2000/gi,' ').replace(/h[il1]ghway/gi,' ');
-    dataRow=dataRow.replace(/shoe\s*ave/gi,' ').replace(/sumulong/gi,' ');
     // Normalize comma-formatted numbers: "1,165" → "1165"
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
     // Extract numbers including leading-dot decimals like .02
@@ -3660,15 +3650,11 @@ function parseQltText(raw){
     var existing=qltData[bc];
     if(existing && existing._score >= counts.length+npsScores.length+osatScores.length) return;
     var def=function(arr,i){return arr[i]!==undefined?arr[i]:null;};
-    // FIX5: NPS and OSAT Top2 Box are both 50-100 — OCR order unreliable for Marikina Bayan row
-    // NPS is always < OSAT Top2 Box in JB data → use Math.min for NPS, Math.max for Top2
-    var npsVal=npsScores.length?Math.min.apply(null,npsScores):null;
-    var top2Val=npsScores.length>1?Math.max.apply(null,npsScores):null;
     var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
            _score:counts.length+npsScores.length+osatScores.length,
-           npsCount:def(counts,0), nps:npsVal, npsVar:def(variances,0),
-           osatCount:def(counts,1), osatTop2:top2Val,
+           npsCount:def(counts,0), nps:def(npsScores,0), npsVar:def(variances,0),
+           osatCount:def(counts,1), osatTop2:null,
            osat:def(osatScores,0), osatVar:def(variances,1),
            nft:def(nftScores,0), nftVar:def(variances,2),
            ltretCount:def(counts,2), ltret:def(osatScores,1), ltretVar:def(variances,3)};
