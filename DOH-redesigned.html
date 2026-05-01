@@ -1679,18 +1679,22 @@ function renderOthersTable(){
   });
   const periodEl=document.getElementById('qlt-period-display');
   if(periodEl)periodEl.textContent=currentPeriod;
+  // Sanity fix at render time — rescues OCR-dropped decimals (e.g. saved osat=48 → 4.8)
+  const sFix=(v,maxAbs)=>v===null||v===undefined?v:(Math.abs(v)>maxAbs?v/10:v);
   BRANCHES.forEach(b=>{
     const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
     const d=entries[0]||{};
     const storeName=QSN[b.code]||b.code;
-    const nps=d.nps!==undefined?d.nps:null;
-    const npsVar=d.npsVar!==undefined?d.npsVar:null;
-    const osat=d.osat!==undefined?d.osat:null;
-    const osatVar=d.osatVar!==undefined?d.osatVar:null;
-    const nft=d.nft!==undefined?d.nft:(d.nft_pct!==undefined?d.nft_pct:null);
-    const nftVar=d.nftVar!==undefined?d.nftVar:null;
-    const ltret=d.ltret!==undefined?d.ltret:null;
-    const ltretVar=d.ltretVar!==undefined?d.ltretVar:null;
+    const nps=sFix(d.nps!==undefined?d.nps:null,100);
+    const npsVar=sFix(d.npsVar!==undefined?d.npsVar:null,100);
+    const osat=sFix(d.osat!==undefined?d.osat:null,5);
+    const osatVar=sFix(d.osatVar!==undefined?d.osatVar:null,5);
+    const nft=sFix(d.nft!==undefined?d.nft:(d.nft_pct!==undefined?d.nft_pct:null),10);
+    const nftVar=sFix(d.nftVar!==undefined?d.nftVar:null,10);
+    const ltret=sFix(d.ltret!==undefined?d.ltret:null,5);
+    const ltretVar=sFix(d.ltretVar!==undefined?d.ltretVar:null,5);
+    // Also fix Top 2 Box on the d object so the inline render below picks up the corrected value
+    if(d.osatTop2!==undefined&&d.osatTop2!==null&&Math.abs(d.osatTop2)>100)d.osatTop2=d.osatTop2/10;
     const varPill=(v,inv)=>{
       if(v===null||v===undefined)return'<span style="color:var(--muted);font-size:11px;">—</span>';
       const pos=!inv?v>=0:v<=0;
@@ -1728,10 +1732,18 @@ function renderNPSRankings(){
     {key:'nft',  label:'NFT Score',  asc:true, tgt:2,   fmt:v=>v.toFixed(1),note:'lower=better'},
   ];
   const QSN={'JB3353':'Gil Fernando','JB0087':'Marikina Bayan','JB3595':'Ejercito','JB3702':'Marilaque','JB3753':'Highway 2000'};
+  // Sanity fix at render time — rescues old data with OCR-dropped decimals (e.g. saved osat=48 → 4.8)
+  const sFix=(v,maxAbs)=>v===null||v===undefined?v:(Math.abs(v)>maxAbs?v/10:v);
   const getLatest=bc=>{
-    const e=npsManual.filter(n=>n.branch===bc).sort((a,c)=>c.date.localeCompare(a.date))[0]||{};
-    if(e.nft===undefined&&e.nft_pct!==undefined)e.nft=e.nft_pct;
-    return e;
+    const raw=npsManual.filter(n=>n.branch===bc).sort((a,c)=>c.date.localeCompare(a.date))[0]||{};
+    if(raw.nft===undefined&&raw.nft_pct!==undefined)raw.nft=raw.nft_pct;
+    // Apply sanity ranges: OSAT/LtRet 0-5, NFT 0-10, NPS/Top2Box 0-100
+    return Object.assign({},raw,{
+      nps:sFix(raw.nps,100), npsVar:sFix(raw.npsVar,100),
+      osat:sFix(raw.osat,5), osatVar:sFix(raw.osatVar,5), osatTop2:sFix(raw.osatTop2,100),
+      ltret:sFix(raw.ltret,5), ltretVar:sFix(raw.ltretVar,5),
+      nft:sFix(raw.nft,10), nftVar:sFix(raw.nftVar,10)
+    });
   };
   let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">';
   metrics.forEach(m=>{
@@ -3649,15 +3661,20 @@ function parseQltText(raw){
     // Skip if this branch already has more values from another row match
     var existing=qltData[bc];
     if(existing && existing._score >= nums.length) return;
+    // Sanity: Tesseract OCR sometimes drops decimal points ("4.8" → 48, "2.9" → 29).
+    // Rescue values outside known ranges by dividing by 10. Real ranges:
+    //   NPS 0-100, NPS Var ±100, OSAT/LtRet 0-5, OSAT Var/LtRet Var ±5, NFT 0-10, NFT Var ±10, Top2Box 0-100.
+    var fix=function(v,maxAbs){if(v===null||v===undefined)return v;return Math.abs(v)>maxAbs?v/10:v;};
     var def=function(i){return nums[i]!==undefined?nums[i]:null;};
     var e={branch:bc,period:document.getElementById('qlt-period').value||'',
            date:document.getElementById('qlt-date').value||today,
            _score:nums.length,
-           npsCount:def(0), nps:def(1), npsVar:def(2),
-           osatCount:def(3), osatTop2:def(4),
-           osat:def(5), osatVar:def(6),
-           nft:def(7), nftVar:def(8),
-           ltretCount:def(9), ltret:def(10), ltretVar:def(11)};
+           npsCount:def(0),
+           nps:fix(def(1),100), npsVar:fix(def(2),100),
+           osatCount:def(3), osatTop2:fix(def(4),100),
+           osat:fix(def(5),5), osatVar:fix(def(6),5),
+           nft:fix(def(7),10), nftVar:fix(def(8),10),
+           ltretCount:def(9), ltret:fix(def(10),5), ltretVar:fix(def(11),5)};
     qltData[bc]=e;
   });
   _step='check results'; if(!Object.keys(qltData).length){
