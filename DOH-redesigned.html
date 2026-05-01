@@ -286,6 +286,38 @@ select.trk-inp{cursor:pointer;}
       <input type="date" id="view-date-tab" style="padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;background:#fff;color:var(--text);cursor:pointer;" onchange="changeViewDate(this.value)">
       <button onclick="changeViewDate('')" style="padding:4px 10px;background:var(--blue-s);border:1px solid var(--blue-b);border-radius:7px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;white-space:nowrap;">Today</button>
       <span id="tbl-date" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
+      <button onclick="openSyncModal()" title="Sync data between devices" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;white-space:nowrap;margin-left:6px;">🔄 Sync</button>
+    </div>
+  </div>
+
+  <!-- ── Sync Modal: Export/Import all data between devices ── -->
+  <div id="sync-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)closeSyncModal()">
+    <div style="background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:20px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:18px;font-weight:700;">🔄 Sync Data Between Devices</h2>
+        <button onclick="closeSyncModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0 4px;">×</button>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        <b>From iMac to iPhone</b> (or any other device):<br>
+        1. On iMac, click <b>Copy to Clipboard</b>.<br>
+        2. Send the copied text to yourself (iMessage, email, Notes).<br>
+        3. On iPhone, open this dashboard, click 🔄 Sync, paste into the box, click <b>Import &amp; Replace</b>.
+      </div>
+      <div style="margin-bottom:14px;">
+        <button onclick="exportSyncData()" style="padding:10px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-right:8px;">📋 Copy to Clipboard</button>
+        <button onclick="downloadSyncData()" style="padding:10px 14px;background:var(--gray-s);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 Download File</button>
+        <span id="sync-export-status" style="font-size:12px;color:var(--green);margin-left:10px;"></span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Import (paste JSON below):</div>
+        <textarea id="sync-import-txt" placeholder="Paste the exported JSON here..." style="width:100%;min-height:140px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;resize:vertical;outline:none;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+          <button onclick="importSyncData()" style="padding:10px 14px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">✓ Import &amp; Replace</button>
+          <input type="file" id="sync-file-input" accept="application/json,.json" onchange="loadSyncFile(this)" style="font-size:12px;">
+          <span id="sync-import-status" style="font-size:12px;"></span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">⚠ Import replaces ALL local data on this device. Cannot be undone — export current data first if you want a backup.</div>
+      </div>
     </div>
   </div>
 
@@ -1041,7 +1073,10 @@ const FOOD_MAX=41;
 const KWH_MAX=1800, WATER_MAX=15;
 const NPS_TARGET=75, OSAT_TARGET=4.0;
 const NPS_PROMOTER=75, NPS_DETRACTOR=50; // 0-50=detractor, 51-74=passive, 75-100=promoter
-const today=new Date().toISOString().split('T')[0];
+// Local-time date helpers — toISOString() converts to UTC which shifts dates by ±1 in PHT (UTC+8). Always use these for any "today/this month" logic.
+function localYMD(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function localYM(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+const today=localYMD();
 
 // QBR branch patterns for Qualtrics OCR matching — declared early so render calls below can't crash before it's assigned
 var QBR=[
@@ -1055,7 +1090,7 @@ var qltData={};
 
 // targets structure: targets[branchCode][YYYY-MM] = {pct,ly,monthly,foodMax,laborMax,acMin,tcMin}
 let targets=JSON.parse(localStorage.getItem('jb_tgt3')||'{}');
-const _currentYM=new Date().toISOString().slice(0,7);
+const _currentYM=localYM();
 BRANCHES.forEach(b=>{
   if(!targets[b.code])targets[b.code]={};
   // migrate old flat object format (had pct/ly directly on branch)
@@ -1212,7 +1247,7 @@ function mtdView(mode){
 
 function renderMTD(){
   const now=new Date();
-  const ym=now.toISOString().slice(0,7);
+  const ym=localYM(now);
   document.getElementById('mtd-range').textContent=`${ym} (1 – ${now.getDate()})`;
 
   // ── SUMMARY VIEW ──
@@ -2452,7 +2487,7 @@ function parseQualtrics(txt){
   const caseName=g(/Subticket Name:\s*(.+)/i);
   let feedbackDate=today;
   const dM=txt.match(/(?:Feedback|Subticket) Date and Time:\s*([\d/]+)/i);
-  if(dM){const d=new Date(dM[1]);if(!isNaN(d))feedbackDate=d.toISOString().split('T')[0];}
+  if(dM){const d=new Date(dM[1]);if(!isNaN(d))feedbackDate=localYMD(d);}
   return{store,type,nps,osat,verbatim,ticket,caseName,date:feedbackDate};
 }
 
@@ -2527,7 +2562,7 @@ function openModal(){
   let opts='';
   for(let i=-3;i<=6;i++){
     const d=new Date(now.getFullYear(),now.getMonth()+i,1);
-    const val=d.toISOString().slice(0,7);
+    const val=localYM(d); // local time — was toISOString() which shifts ±1 month in PHT (UTC+8)
     const label=d.toLocaleDateString('en-PH',{month:'long',year:'numeric'});
     opts+=`<option value="${val}"${val===modalYM?' selected':''}>${label}</option>`;
   }
@@ -3029,7 +3064,7 @@ function toggleOpsForm(){
   btn.textContent = open ? '✕ Close' : '+ Add Entry';
   if(open){
     // set today as default date
-    const today2 = new Date().toISOString().split('T')[0];
+    const today2 = localYMD();
     if(currentOpsTab==='quotations'){ const d=document.getElementById('q-date'); if(!d.value)d.value=today2; }
     if(currentOpsTab==='equipment'){  const d=document.getElementById('e-datereported'); if(!d.value)d.value=today2; }
   }
@@ -3042,7 +3077,7 @@ function toggleFUForm(){
   f.style.display=show?'block':'none';
   btn.textContent=show?'✕ Cancel':'+ Add Follow-up';
   if(show){
-    const today2=new Date().toISOString().split('T')[0];
+    const today2=localYMD();
     const d=document.getElementById('f-dateadded');
     if(!d.value)d.value=today2;
   }
@@ -3180,7 +3215,7 @@ function updateEquipStatus(id,val){
   const e=equipment.find(e=>e.id===id);
   if(e){
     e.status=val;
-    if(val==='completed'&&!e.datecompleted)e.datecompleted=new Date().toISOString().split('T')[0];
+    if(val==='completed'&&!e.datecompleted)e.datecompleted=localYMD();
     localStorage.setItem('jb_equip',JSON.stringify(equipment));
     renderEquipment();
   }
@@ -3275,7 +3310,7 @@ function renderFollowups(){
   const board=document.getElementById('at-board');
   const q=(document.getElementById('fu-search')?.value||'').toLowerCase();
   const filteredF=followups.filter(f=>!q||(f.item||'').toLowerCase().includes(q)||(f.branch||'').toLowerCase().includes(q)||(f.assignedto||'').toLowerCase().includes(q)||(f.notes||'').toLowerCase().includes(q));
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localYMD();
 
   // ── Active Board (top) — not_started / pending / in_process per branch ──
   if(board){
@@ -3756,6 +3791,69 @@ function resetQltPaste(){
   document.getElementById('qlt-status').textContent='';
   document.getElementById('qlt-status').style.color='';
   qltData={};
+}
+
+// ── SYNC DATA BETWEEN DEVICES (export/import all localStorage) ──
+var SYNC_KEYS=['jb_sub3','jb_voc_all','jb_voc_dismissed','jb_voc_last_fetch','jb_nps_manual','jb_tgt3','jb_pcf','jb_pcf_seeded','jb_pcf_sync','jb_fas','jb_fu','jb_quot','jb_equip','jb_email_archived'];
+function openSyncModal(){document.getElementById('sync-modal').style.display='flex';document.getElementById('sync-import-txt').value='';document.getElementById('sync-export-status').textContent='';document.getElementById('sync-import-status').textContent='';}
+function closeSyncModal(){document.getElementById('sync-modal').style.display='none';}
+function buildSyncPayload(){
+  var payload={_v:1,_ts:Date.now(),_date:new Date().toISOString(),data:{}};
+  SYNC_KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)payload.data[k]=v;});
+  return JSON.stringify(payload);
+}
+function exportSyncData(){
+  var json=buildSyncPayload();
+  var status=document.getElementById('sync-export-status');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(function(){
+      status.textContent='✓ Copied '+(json.length/1024).toFixed(1)+' KB to clipboard';
+      status.style.color='var(--green)';
+    },function(){fallbackCopySync(json,status);});
+  }else{fallbackCopySync(json,status);}
+}
+function fallbackCopySync(json,status){
+  var ta=document.createElement('textarea');ta.value=json;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');status.textContent='✓ Copied '+(json.length/1024).toFixed(1)+' KB';status.style.color='var(--green)';}
+  catch(e){status.textContent='⚠ Copy failed — use Download File instead';status.style.color='var(--red)';}
+  document.body.removeChild(ta);
+}
+function downloadSyncData(){
+  var json=buildSyncPayload();
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var stamp=new Date().toISOString().substring(0,10);
+  a.href=url;a.download='doh-sync-'+stamp+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  document.getElementById('sync-export-status').textContent='✓ File downloaded';
+  document.getElementById('sync-export-status').style.color='var(--green)';
+}
+function loadSyncFile(input){
+  var file=input.files&&input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){document.getElementById('sync-import-txt').value=e.target.result;document.getElementById('sync-import-status').textContent='File loaded — click Import';document.getElementById('sync-import-status').style.color='var(--blue)';};
+  reader.readAsText(file);
+}
+function importSyncData(){
+  var status=document.getElementById('sync-import-status');
+  var txt=document.getElementById('sync-import-txt').value.trim();
+  if(!txt){status.textContent='⚠ Paste JSON or load file first';status.style.color='var(--red)';return;}
+  try{
+    var payload=JSON.parse(txt);
+    if(!payload||!payload.data||typeof payload.data!=='object')throw new Error('Invalid sync payload — missing data');
+    var imported=0;
+    Object.keys(payload.data).forEach(function(k){
+      if(SYNC_KEYS.indexOf(k)===-1)return; // ignore unknown keys
+      try{localStorage.setItem(k,payload.data[k]);imported++;}catch(e){}
+    });
+    status.textContent='✓ Imported '+imported+' keys — reloading...';
+    status.style.color='var(--green)';
+    setTimeout(function(){location.reload();},900);
+  }catch(e){
+    status.textContent='⚠ Invalid JSON: '+e.message;
+    status.style.color='var(--red)';
+  }
 }
 // ─────────────────────────────────────────────────────────
 </script>
