@@ -3637,6 +3637,9 @@ function parseQltText(raw){
     if(nameDigits[bc])dataRow=dataRow.replace(nameDigits[bc],' ');
     // Extract numbers including leading-dot decimals like .02
     var nums=(dataRow.match(/-?\.?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
+    // Safety: filter out store codes that leaked through when OCR loses the "|" separator (e.g. "3353 Gil Fernando" → 3353 ends up as nums[0]).
+    var STORE_CODES=[3353,3595,3702,3753,87,67,88,0087];
+    nums=nums.filter(function(n){return !STORE_CODES.includes(Math.abs(n));});
     // POSITIONAL MAPPING — take values exactly as the Qualtrics column order shows them.
     // No bucketed classification (size-range guessing scrambles columns when data crosses ranges).
     // Qualtrics Store/Restaurant/Cafe Summary column order:
