@@ -1109,13 +1109,14 @@ const _npsPreload=[
   {"branch":"JB0087","period":"Apr 2026","date":"2026-04-19","npsCount":58,"nps":70.7,"npsVar":17.7,"osatCount":248,"osatTop2":92.7,"osat":4.7,"osatVar":0.0,"nft":0.8,"nftVar":0.6,"ltretCount":57,"ltret":4.5,"ltretVar":0.2},
   {"branch":"JB3595","period":"Apr 2026","date":"2026-04-19","npsCount":324,"nps":68.2,"npsVar":7.7,"osatCount":1165,"osatTop2":91.2,"osat":4.7,"osatVar":-0.1,"nft":3.5,"nftVar":2.2,"ltretCount":319,"ltret":4.6,"ltretVar":0.2},
   {"branch":"JB3702","period":"Apr 2026","date":"2026-04-19","npsCount":221,"nps":73.8,"npsVar":-4.7,"osatCount":927,"osatTop2":94.3,"osat":4.8,"osatVar":-0.1,"nft":2.6,"nftVar":1.5,"ltretCount":218,"ltret":4.6,"ltretVar":-0.0},
-  {"branch":"JB3753","period":"Apr 2026","date":"2026-04-19","npsCount":null,"nps":null,"npsVar":null,"osatCount":null,"osatTop2":null,"osat":null,"osatVar":null,"nft":null,"nftVar":null,"ltretCount":null,"ltret":null,"ltretVar":null}
+  {"branch":"JB3753","period":"Apr 2026","date":"2026-04-30","npsCount":131,"nps":59.5,"npsVar":0.0,"osatCount":711,"osatTop2":93.1,"osat":4.7,"osatVar":0.0,"nft":2.1,"nftVar":2.1,"ltretCount":126,"ltret":4.3,"ltretVar":0.0}
 ];
 const _npsStored=JSON.parse(localStorage.getItem('jb_nps_manual')||'[]');
-// Merge: preload + any additional stored entries
-const _npsMerged=_npsPreload.slice();
-_npsStored.forEach(function(s){
-  if(!_npsMerged.find(function(p){return p.branch===s.branch&&p.period===s.period;}))_npsMerged.push(s);
+// Merge: STORED entries take precedence over preload (user's saved Qualtrics extractions are authoritative).
+// Without this, preload nulls would mask saved extracted data on every page reload.
+const _npsMerged=_npsStored.slice();
+_npsPreload.forEach(function(p){
+  if(!_npsMerged.find(function(s){return s.branch===p.branch&&s.period===p.period;}))_npsMerged.push(p);
 });
 let npsManual=_npsMerged;
 try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(e){}
