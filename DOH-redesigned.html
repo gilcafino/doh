@@ -530,6 +530,8 @@ select.trk-inp{cursor:pointer;}
             <button id="mtd-btn-summary" onclick="mtdView('summary')" style="padding:5px 14px;border:none;border-radius:6px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12);">Summary</button>
             <button id="mtd-btn-daily" onclick="mtdView('daily')" style="padding:5px 14px;border:none;border-radius:6px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;font-size:12px;font-weight:500;cursor:pointer;background:transparent;color:var(--muted);">By Day</button>
           </div>
+          <span style="font-size:11px;font-weight:600;color:var(--muted);margin-left:6px;">Month:</span>
+          <select id="mtd-month-sel" onchange="changeMtdMonth(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:7px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;font-size:12px;font-weight:500;color:var(--text);background:#fff;cursor:pointer;appearance:auto;"></select>
           <select id="mtd-branch-filter" onchange="mtdBranchFilter(this.value)" style="display:none;padding:5px 10px;border:1px solid var(--border);border-radius:7px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;font-size:12px;font-weight:500;color:var(--text);background:#fff;cursor:pointer;appearance:auto;">
             <option value="all">All Branches</option>
             <option value="JB3353">JB3353 — Gil Fernando</option>
@@ -1257,10 +1259,27 @@ function mtdView(mode){
   renderMTD();
 }
 
+// MTD month state — persists across renders so user can browse past months
+var mtdYM=localYM();
+function changeMtdMonth(val){if(val)mtdYM=val;renderMTD();}
+function buildMtdMonthOptions(){
+  const sel=document.getElementById('mtd-month-sel');if(!sel)return;
+  const now=new Date();let opts='';
+  for(let i=-12;i<=2;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const val=localYM(d);
+    const label=d.toLocaleDateString('en-PH',{month:'long',year:'numeric'});
+    opts+=`<option value="${val}"${val===mtdYM?' selected':''}>${label}</option>`;
+  }
+  sel.innerHTML=opts;
+}
 function renderMTD(){
-  const now=new Date();
-  const ym=localYM(now);
-  document.getElementById('mtd-range').textContent=`${ym} (1 – ${now.getDate()})`;
+  const ym=mtdYM||localYM();
+  // figure out the "days in range" — full month if past month, 1..today if current month
+  const now=new Date();const curYM=localYM(now);
+  const lastDay=ym===curYM?now.getDate():new Date(parseInt(ym.slice(0,4)),parseInt(ym.slice(5,7)),0).getDate();
+  document.getElementById('mtd-range').textContent=`${ym} (1 – ${lastDay})`;
+  buildMtdMonthOptions();
 
   // ── SUMMARY VIEW ──
   const tbody=document.getElementById('mtd-sales-tbody');
