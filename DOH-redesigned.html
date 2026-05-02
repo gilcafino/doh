@@ -298,10 +298,12 @@ select.trk-inp{cursor:pointer;}
         <button onclick="closeSyncModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0 4px;">×</button>
       </div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
-        <b>From iMac to iPhone</b> (or any other device):<br>
-        1. On iMac, click <b>Copy to Clipboard</b>.<br>
-        2. Send the copied text to yourself (iMessage, email, Notes).<br>
-        3. On iPhone, open this dashboard, click 🔄 Sync, paste into the box, click <b>Import &amp; Replace</b>.
+        <b>iCloud Drive method</b> (recommended — works without copy-paste):<br>
+        1. On iMac, click <b>💾 Download File</b>. File goes to Downloads.<br>
+        2. Drag it into <b>iCloud Drive</b> (Finder → iCloud Drive folder).<br>
+        3. On iPhone: open dashboard → 🔄 Sync → tap <b>Choose File</b> → pick <b>Browse</b> → <b>iCloud Drive</b> → select the file → tap <b>✓ Import &amp; Replace</b>.<br>
+        <br>
+        <b>Targets save automatically</b> — every time you click Save Targets, a backup file downloads. Move it to iCloud Drive once a day to keep iPhone in sync.
       </div>
       <div style="margin-bottom:14px;">
         <button onclick="exportSyncData()" style="padding:10px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-right:8px;">📋 Copy to Clipboard</button>
@@ -2594,8 +2596,43 @@ function saveTargets(){
     const acMin=parseFloat(document.getElementById('mac-'+b.code).value)||1500;
     targets[b.code][modalYM]={pct:isNaN(pct)?5:pct, ly, monthly, foodMax, laborMax, tcMin, acMin};
   });
-  localStorage.setItem('jb_tgt3',JSON.stringify(targets));
+  // Save to localStorage with verification — if it fails, alert the user instead of losing data silently.
+  let saveOk=false;
+  try{
+    localStorage.setItem('jb_tgt3',JSON.stringify(targets));
+    // Verify by reading back
+    const verify=JSON.parse(localStorage.getItem('jb_tgt3')||'{}');
+    if(verify[BRANCHES[0].code]&&verify[BRANCHES[0].code][modalYM])saveOk=true;
+  }catch(e){console.error('Target save failed:',e);}
+  if(!saveOk){alert('Could not save targets to local storage. Targets stayed in memory but will not survive a page reload. Try Sync to back them up.');return;}
+  // Auto-download backup so user has an iCloud-portable copy after every change
+  try{autoBackupAfterSave('targets-'+modalYM);}catch(e){}
   closeModal();renderAll();
+  showSaveBanner('Targets saved for '+modalYM+' · backup downloaded');
+}
+
+// Show a brief on-screen confirmation banner so user knows save worked.
+function showSaveBanner(msg){
+  let b=document.getElementById('_save_banner');
+  if(!b){b=document.createElement('div');b.id='_save_banner';b.style.cssText='position:fixed;top:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);font-family:-apple-system,BlinkMacSystemFont,sans-serif;';document.body.appendChild(b);}
+  b.textContent='✓ '+msg;b.style.display='block';
+  clearTimeout(window._bannerTimer);
+  window._bannerTimer=setTimeout(function(){b.style.display='none';},3500);
+}
+
+// Auto-download a full backup. Triggered on every saveTargets / important data change.
+function autoBackupAfterSave(label){
+  if(typeof buildSyncPayload!=='function')return; // sync feature not loaded yet
+  try{
+    const json=buildSyncPayload();
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const stamp=localYMD();
+    a.href=url;a.download='doh-backup-'+(label||'data')+'-'+stamp+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }catch(e){console.error('Auto-backup failed:',e);}
 }
 
 // ── EMAIL SUMMARY ──
