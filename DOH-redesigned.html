@@ -308,6 +308,12 @@ select.trk-inp{cursor:pointer;}
         <button onclick="downloadSyncData()" style="padding:10px 14px;background:var(--gray-s);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 Download File</button>
         <span id="sync-export-status" style="font-size:12px;color:var(--green);margin-left:10px;"></span>
       </div>
+      <!-- Manual fallback: always-visible textarea with the data ready to select+copy -->
+      <div style="margin-bottom:14px;padding:10px;background:#f5f5f7;border-radius:8px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Or just select all text below and copy manually:</div>
+        <textarea id="sync-export-txt" readonly onclick="this.select()" style="width:100%;min-height:80px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10px;background:#fff;resize:vertical;"></textarea>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Tip: click in the box → Cmd+A to select all → Cmd+C to copy.</div>
+      </div>
       <div style="border-top:1px solid var(--border);padding:10px 0;margin-bottom:8px;">
         <button onclick="syncFromSheet(false);closeSyncModal();" style="padding:8px 14px;background:#30D158;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">⇄ Pull from Google Sheets</button>
         <span style="font-size:11px;color:var(--muted);margin-left:8px;">Fetches latest submissions and NPS from your shared sheets.</span>
@@ -3799,7 +3805,14 @@ function resetQltPaste(){
 
 // ── SYNC DATA BETWEEN DEVICES (export/import all localStorage) ──
 var SYNC_KEYS=['jb_sub3','jb_voc_all','jb_voc_dismissed','jb_voc_last_fetch','jb_nps_manual','jb_tgt3','jb_pcf','jb_pcf_seeded','jb_pcf_sync','jb_fas','jb_fu','jb_quot','jb_equip','jb_email_archived'];
-function openSyncModal(){document.getElementById('sync-modal').style.display='flex';document.getElementById('sync-import-txt').value='';document.getElementById('sync-export-status').textContent='';document.getElementById('sync-import-status').textContent='';}
+function openSyncModal(){
+  document.getElementById('sync-modal').style.display='flex';
+  document.getElementById('sync-import-txt').value='';
+  document.getElementById('sync-export-status').textContent='';
+  document.getElementById('sync-import-status').textContent='';
+  // Auto-fill the manual-copy textarea so user can always select+copy even if buttons fail
+  try{var ta=document.getElementById('sync-export-txt');if(ta)ta.value=buildSyncPayload();}catch(e){}
+}
 function closeSyncModal(){document.getElementById('sync-modal').style.display='none';}
 function buildSyncPayload(){
   var payload={_v:1,_ts:Date.now(),_date:new Date().toISOString(),data:{}};
