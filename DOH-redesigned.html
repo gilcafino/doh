@@ -3856,8 +3856,14 @@ function importSyncData(){
   var status=document.getElementById('sync-import-status');
   var txt=document.getElementById('sync-import-txt').value.trim();
   if(!txt){status.textContent='⚠ Paste JSON or load file first';status.style.color='var(--red)';return;}
+  // Strip surrounding quotes if iMessage/Notes wrapped the paste in quotes
+  if((txt.charAt(0)==='"'&&txt.charAt(txt.length-1)==='"')||(txt.charAt(0)==='\''&&txt.charAt(txt.length-1)==='\'')){txt=txt.substring(1,txt.length-1);}
+  // Unescape if double-encoded (iMessage sometimes escapes quotes when pasting JSON)
+  if(txt.indexOf('\\"')!==-1&&txt.indexOf('"')===-1){txt=txt.replace(/\\"/g,'"').replace(/\\\\/g,'\\');}
   try{
     var payload=JSON.parse(txt);
+    // If payload came back as a string, it was double-encoded — parse again
+    if(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e2){}}
     if(!payload||!payload.data||typeof payload.data!=='object')throw new Error('Invalid sync payload — missing data');
     var imported=0;
     Object.keys(payload.data).forEach(function(k){
