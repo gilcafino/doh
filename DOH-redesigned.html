@@ -450,10 +450,13 @@ select.trk-inp{cursor:pointer;}
             <thead>
               <tr style="background:var(--bg);">
                 <th style="min-width:170px;text-align:left">Store</th>
-                <th style="text-align:right;white-space:nowrap">NPS Count</th>
-                <th style="text-align:right">NPS</th>
-                <th style="text-align:right;white-space:nowrap;font-size:10px">NPS Var<br>vs Prior</th>
-                <th style="text-align:right;white-space:nowrap">OSAT Count</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px;border-left:2px solid var(--blue-b);padding-left:8px;color:var(--blue)">MTD<br>NPS Count</th>
+                <th style="text-align:right;color:var(--blue)">MTD NPS</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px;color:var(--blue)">NPS Var<br>vs Prior</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px;border-left:2px solid #A3D9B5;padding-left:8px;color:var(--green)">YTD<br>NPS Count</th>
+                <th style="text-align:right;color:var(--green)">YTD NPS</th>
+                <th style="text-align:right;white-space:nowrap;font-size:10px;color:var(--green)">NPS Var<br>vs Prior</th>
+                <th style="text-align:right;white-space:nowrap;border-left:1px solid var(--border)">OSAT Count</th>
                 <th style="text-align:right;white-space:nowrap;font-size:10px">OSAT<br>Top 2 Box</th>
                 <th style="text-align:right">OSAT</th>
                 <th style="text-align:right;white-space:nowrap;font-size:10px">OSAT Var<br>vs Prior</th>
@@ -478,44 +481,86 @@ select.trk-inp{cursor:pointer;}
         <div id="nps-rankings-body" style="padding:10px 14px;"></div>
       </div>
 
-      <!-- CARD 3: PASTE QUALTRICS SCREENSHOT (bottom) -->
-      <div class="qlt-card" style="margin-top:14px;">
-        <div class="qlt-header">
-          <span class="qlt-title">📋 Paste Qualtrics Screenshot</span>
-          <div class="qlt-meta">
-            <input class="qlt-inp" type="text" id="qlt-period" placeholder="e.g. Apr 2026" style="width:140px;">
-            <input class="qlt-inp" type="date" id="qlt-date">
+      <!-- CARD 3: PASTE QUALTRICS SCREENSHOT — MTD + YTD -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+
+        <!-- MTD PASTE ZONE -->
+        <div class="qlt-card">
+          <div class="qlt-header">
+            <span class="qlt-title">&#128203; Qualtrics Screenshot &mdash; <span style="color:var(--blue)">MTD</span></span>
+            <div class="qlt-meta">
+              <input class="qlt-inp" type="text" id="qlt-period" placeholder="e.g. Apr 2026" style="width:120px;">
+              <input class="qlt-inp" type="date" id="qlt-date">
+            </div>
           </div>
-        </div>
-        <!-- PASTE ZONE -->
-        <div id="qlt-zone" tabindex="0" onclick="document.getElementById('qlt-zone').focus();"
-          onpaste="handleQltPaste(event)"
-          onfocus="this.style.borderColor='var(--blue)';this.style.background='#EAF2FF';"
-          onblur="this.style.borderColor='var(--blue-b)';this.style.background='var(--blue-s)';"
-          style="border:2px dashed var(--blue-b);border-radius:10px;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--blue-s);outline:none;position:relative;overflow:hidden;transition:all .15s;margin-bottom:10px;">
-          <div id="qlt-zone-prompt" style="text-align:center;padding:16px;">
-            <div style="font-size:26px;margin-bottom:6px;">📋</div>
-            <div style="font-size:13px;font-weight:700;color:var(--blue);">Click here · then press ⌘V to paste Qualtrics screenshot</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Always MTD Store/Restaurant/Cafe Summary format</div>
+          <div id="qlt-zone" tabindex="0" onclick="document.getElementById('qlt-zone').focus();"
+            onpaste="handleQltPaste(event,'mtd')"
+            onfocus="this.style.borderColor='var(--blue)';this.style.background='#EAF2FF';"
+            onblur="this.style.borderColor='var(--blue-b)';this.style.background='var(--blue-s)';"
+            style="border:2px dashed var(--blue-b);border-radius:10px;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--blue-s);outline:none;position:relative;overflow:hidden;transition:all .15s;margin-bottom:10px;">
+            <div id="qlt-zone-prompt" style="text-align:center;padding:16px;">
+              <div style="font-size:26px;margin-bottom:6px;">&#128203;</div>
+              <div style="font-size:13px;font-weight:700;color:var(--blue);">Click here &middot; then press &#8984;V</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">MTD Store/Restaurant/Cafe Summary</div>
+            </div>
+            <img id="qlt-img" style="display:none;max-width:100%;max-height:160px;border-radius:6px;margin:8px;">
           </div>
-          <img id="qlt-img" style="display:none;max-width:100%;max-height:160px;border-radius:6px;margin:8px;">
-        </div>
-        <!-- OCR PROGRESS -->
-        <div id="qlt-ocr-bar" style="display:none;margin-bottom:10px;">
-          <div style="height:4px;background:#E2E8F4;border-radius:2px;overflow:hidden;">
-            <div id="qlt-bar-fill" style="height:100%;background:var(--blue);width:0%;transition:width .3s;border-radius:2px;"></div>
+          <div id="qlt-ocr-bar" style="display:none;margin-bottom:10px;">
+            <div style="height:4px;background:#E2E8F4;border-radius:2px;overflow:hidden;">
+              <div id="qlt-bar-fill" style="height:100%;background:var(--blue);width:0%;transition:width .3s;border-radius:2px;"></div>
+            </div>
+            <div id="qlt-ocr-msg" style="font-size:11px;color:var(--muted);font-family:'SF Mono','JetBrains Mono',monospace;margin-top:4px;">Reading...</div>
           </div>
-          <div id="qlt-ocr-msg" style="font-size:11px;color:var(--muted);font-family:'SF Mono','JetBrains Mono',monospace;margin-top:4px;">Reading...</div>
-        </div>
-        <!-- REVIEW GRID (13 columns) -->
-        <div id="qlt-grid" style="display:none;">
-          <div id="qlt-preview" style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;"></div>
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="extract-btn" style="background:var(--blue);box-shadow:0 2px 8px rgba(0,87,217,.35);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted()">✓ Save to Dashboard</button>
-            <button class="extract-btn" style="background:var(--gray-s,#F2F2F7);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste()">✕ Clear</button>
+          <div id="qlt-grid" style="display:none;">
+            <div id="qlt-preview" style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;"></div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="extract-btn" style="background:var(--blue);box-shadow:0 2px 8px rgba(0,87,217,.35);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted('mtd')">&check; Save MTD</button>
+              <button class="extract-btn" style="background:var(--gray-s,#F2F2F7);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste('mtd')">&times; Clear</button>
+            </div>
           </div>
+          <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
+          <pre id="qlt-debug" style="display:none;font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;white-space:pre-wrap;max-height:180px;overflow-y:auto;"></pre>
         </div>
-        <div id="qlt-status" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
+
+        <!-- YTD PASTE ZONE -->
+        <div class="qlt-card">
+          <div class="qlt-header">
+            <span class="qlt-title">&#128203; Qualtrics Screenshot &mdash; <span style="color:var(--green)">YTD</span></span>
+            <div class="qlt-meta">
+              <input class="qlt-inp" type="text" id="qlt-period-ytd" placeholder="e.g. Jan-Apr 2026" style="width:130px;">
+              <input class="qlt-inp" type="date" id="qlt-date-ytd">
+            </div>
+          </div>
+          <div id="qlt-zone-ytd" tabindex="0" onclick="document.getElementById('qlt-zone-ytd').focus();"
+            onpaste="handleQltPaste(event,'ytd')"
+            onfocus="this.style.borderColor='var(--green)';this.style.background='#EAFAF0';"
+            onblur="this.style.borderColor='#A3D9B5';this.style.background='#F0FAF4';"
+            style="border:2px dashed #A3D9B5;border-radius:10px;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:#F0FAF4;outline:none;position:relative;overflow:hidden;transition:all .15s;margin-bottom:10px;">
+            <div id="qlt-zone-prompt-ytd" style="text-align:center;padding:16px;">
+              <div style="font-size:26px;margin-bottom:6px;">&#128203;</div>
+              <div style="font-size:13px;font-weight:700;color:var(--green);">Click here &middot; then press &#8984;V</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">YTD Store/Restaurant/Cafe Summary</div>
+            </div>
+            <img id="qlt-img-ytd" style="display:none;max-width:100%;max-height:160px;border-radius:6px;margin:8px;">
+          </div>
+          <div id="qlt-ocr-bar-ytd" style="display:none;margin-bottom:10px;">
+            <div style="height:4px;background:#E2E8F4;border-radius:2px;overflow:hidden;">
+              <div id="qlt-bar-fill-ytd" style="height:100%;background:var(--green);width:0%;transition:width .3s;border-radius:2px;"></div>
+            </div>
+            <div id="qlt-ocr-msg-ytd" style="font-size:11px;color:var(--muted);font-family:'SF Mono','JetBrains Mono',monospace;margin-top:4px;">Reading...</div>
+          </div>
+          <div id="qlt-grid-ytd" style="display:none;">
+            <div id="qlt-preview-ytd" style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;"></div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="extract-btn" style="background:var(--green);box-shadow:0 2px 8px rgba(0,160,80,.25);padding:9px 20px;font-size:13px;" onclick="saveQltExtracted('ytd')">&check; Save YTD</button>
+              <button class="extract-btn" style="background:var(--gray-s,#F2F2F7);color:var(--text);border:1px solid var(--border);box-shadow:none;padding:9px 16px;font-size:13px;" onclick="resetQltPaste('ytd')">&times; Clear</button>
+            </div>
+          </div>
+          <div id="qlt-status-ytd" style="font-size:12px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);margin-top:8px;min-height:16px;"></div>
+          <pre id="qlt-debug-ytd" style="display:none;font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;white-space:pre-wrap;max-height:180px;overflow-y:auto;"></pre>
+        </div>
+
+      </div>
         <pre id="qlt-debug" style="display:none;font-size:10px;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--muted);background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;white-space:pre-wrap;max-height:180px;overflow-y:auto;"></pre>
       </div>
 
@@ -1101,6 +1146,7 @@ var QBR=[
   {code:'JB0087',key:'0087',name:'Marikina Bayan',  pat:/(^|\D)(87|0087)(\D|$)|marikina|bayan|shoe/i}
 ];
 var qltData={};
+var qltDataYTD={};
 
 // targets structure: targets[branchCode][YYYY-MM] = {pct,ly,monthly,foodMax,laborMax,acMin,tcMin}
 let targets=JSON.parse(localStorage.getItem('jb_tgt3')||'{}');
@@ -1729,15 +1775,8 @@ function renderOthersTable(){
   if(!tbody)return;
   tbody.innerHTML='';
   const QSN={'JB3353':'3353|Gil Fernando Sumulong Hiway','JB0087':'87|Marikina Bayan/Shoe Ave','JB3595':'3595|Ejercito C6','JB3702':'3702|Marilaque','JB3753':'3753|Highway 2000'};
-  const fmt=(v,dec=1)=>v===null||v===undefined?'—':(typeof v==='number'?v.toFixed(dec):v);
   const fmtI=(v)=>v===null||v===undefined?'—':v.toLocaleString();
-  const varCls=(v,invertRed)=>{
-    if(v===null||v===undefined)return'em';
-    if(invertRed){return v>0?'br':'ok';} // NFT: positive var = worse
-    return v>=0?'ok':'br';
-  };
   const scoreCls=(v,tgt)=>v===null?'em':v>=tgt?'ok':v>=(tgt-.5)?'wa':'br';
-  // Find the current period from latest entries
   let currentPeriod='';
   BRANCHES.forEach(b=>{
     const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
@@ -1745,21 +1784,23 @@ function renderOthersTable(){
   });
   const periodEl=document.getElementById('qlt-period-display');
   if(periodEl)periodEl.textContent=currentPeriod;
-  // Sanity fix at render time — rescues OCR-dropped decimals (e.g. saved osat=48 → 4.8)
   const sFix=(v,maxAbs)=>v===null||v===undefined?v:(Math.abs(v)>maxAbs?v/10:v);
   BRANCHES.forEach(b=>{
-    const entries=npsManual.filter(n=>n.branch===b.code).sort((a,c)=>c.date.localeCompare(a.date));
-    const d=entries[0]||{};
+    const mtdEntries=npsManual.filter(n=>n.branch===b.code&&(n.period_type==='mtd'||!n.period_type)).sort((a,c)=>c.date.localeCompare(a.date));
+    const d=mtdEntries[0]||{};
+    const ytdEntries=npsManual.filter(n=>n.branch===b.code&&n.period_type==='ytd').sort((a,c)=>c.date.localeCompare(a.date));
+    const dy=ytdEntries[0]||{};
     const storeName=QSN[b.code]||b.code;
     const nps=sFix(d.nps!==undefined?d.nps:null,100);
     const npsVar=sFix(d.npsVar!==undefined?d.npsVar:null,100);
+    const npsYTD=sFix(dy.nps!==undefined?dy.nps:null,100);
+    const npsVarYTD=sFix(dy.npsVar!==undefined?dy.npsVar:null,100);
     const osat=sFix(d.osat!==undefined?d.osat:null,5);
     const osatVar=sFix(d.osatVar!==undefined?d.osatVar:null,5);
     const nft=sFix(d.nft!==undefined?d.nft:(d.nft_pct!==undefined?d.nft_pct:null),10);
     const nftVar=sFix(d.nftVar!==undefined?d.nftVar:null,10);
     const ltret=sFix(d.ltret!==undefined?d.ltret:null,5);
     const ltretVar=sFix(d.ltretVar!==undefined?d.ltretVar:null,5);
-    // Also fix Top 2 Box on the d object so the inline render below picks up the corrected value
     if(d.osatTop2!==undefined&&d.osatTop2!==null&&Math.abs(d.osatTop2)>100)d.osatTop2=d.osatTop2/10;
     const varPill=(v,inv)=>{
       if(v===null||v===undefined)return'<span style="color:var(--muted);font-size:11px;">—</span>';
@@ -1771,10 +1812,13 @@ function renderOthersTable(){
     };
     tbody.innerHTML+=`<tr>
       <td style="font-weight:600;font-size:12px;">${storeName}</td>
-      <td style="text-align:right;font-size:12px;">${fmtI(d.npsCount)}</td>
+      <td style="text-align:right;font-size:12px;border-left:2px solid var(--blue-b);padding-left:8px;">${fmtI(d.npsCount)}</td>
       <td style="text-align:right"><span class="kv ${scoreCls(nps,75)}">${nps!==null?nps.toFixed(1):'—'}</span></td>
       <td style="text-align:right">${varPill(npsVar,false)}</td>
-      <td style="text-align:right;font-size:12px;">${fmtI(d.osatCount)}</td>
+      <td style="text-align:right;font-size:12px;border-left:2px solid #A3D9B5;padding-left:8px;">${fmtI(dy.npsCount)}</td>
+      <td style="text-align:right"><span class="kv ${scoreCls(npsYTD,75)}">${npsYTD!==null?npsYTD.toFixed(1):'—'}</span></td>
+      <td style="text-align:right">${varPill(npsVarYTD,false)}</td>
+      <td style="text-align:right;font-size:12px;border-left:1px solid var(--border);">${fmtI(d.osatCount)}</td>
       <td style="text-align:right;font-size:12px;">${d.osatTop2!==null&&d.osatTop2!==undefined?d.osatTop2.toFixed(1)+'%':'—'}</td>
       <td style="text-align:right"><span class="kv ${scoreCls(osat,4.5)}">${osat!==null?osat.toFixed(1):'—'}</span></td>
       <td style="text-align:right">${varPill(osatVar,false)}</td>
@@ -1787,7 +1831,6 @@ function renderOthersTable(){
   });
   renderNPSRankings();
 }
-
 function renderNPSRankings(){
   const cont=document.getElementById('nps-rankings-body');
   if(!cont)return;
@@ -3657,182 +3700,146 @@ async function syncNPSFromSheet(){
 // ── QUALTRICS SCREENSHOT OCR ─────────────────────────────
 // QBR and qltData declared at top of script near BRANCHES — see line ~1066
 
-function handleQltPaste(e){
+function handleQltPaste(e,type){
+  type=type||'mtd';
   e.preventDefault();
   var items=e.clipboardData&&e.clipboardData.items;
   if(!items)return;
+  var sfx=type==='ytd'?'-ytd':'';
   for(var i=0;i<items.length;i++){
     if(items[i].type.indexOf('image')!==-1){
       var blob=items[i].getAsFile();
       var url=URL.createObjectURL(blob);
-      var img=document.getElementById('qlt-img');
+      var img=document.getElementById('qlt-img'+sfx);
       img.src=url; img.style.display='block';
-      document.getElementById('qlt-zone-prompt').style.display='none';
-      document.getElementById('qlt-status').textContent='';
-      runQltOCR(url);
+      document.getElementById('qlt-zone-prompt'+sfx).style.display='none';
+      document.getElementById('qlt-status'+sfx).textContent='';
+      runQltOCR(url,type);
       return;
     }
   }
-  document.getElementById('qlt-status').textContent='No image found in clipboard — copy a screenshot first.';
+  document.getElementById('qlt-status'+sfx).textContent='No image found in clipboard — copy a screenshot first.';
 }
-
-function runQltOCR(url){
-  var bar=document.getElementById('qlt-ocr-bar');
-  var fill=document.getElementById('qlt-bar-fill');
-  var msg=document.getElementById('qlt-ocr-msg');
-  bar.style.display='block';
-  fill.style.width='5%';
-  msg.textContent='Starting OCR...';
-
+function runQltOCR(url,type){
+  type=type||'mtd';
+  var sfx=type==='ytd'?'-ytd':'';
+  var bar=document.getElementById('qlt-ocr-bar'+sfx);
+  var fill=document.getElementById('qlt-bar-fill'+sfx);
+  var msg=document.getElementById('qlt-ocr-msg'+sfx);
+  bar.style.display='block'; fill.style.width='5%'; msg.textContent='Starting OCR...';
   Tesseract.recognize(url,'eng',{
     logger:function(m){
-      if(m.status==='recognizing text'){
-        var pct=Math.round(m.progress*100);
-        fill.style.width=pct+'%';
-        msg.textContent='Reading text... '+pct+'%';
-      }
+      if(m.status==='recognizing text'){var pct=Math.round(m.progress*100);fill.style.width=pct+'%';msg.textContent='Reading text... '+pct+'%';}
     }
   }).then(function(result){
-    fill.style.width='100%';
-    msg.textContent='Done. Parsing data...';
+    fill.style.width='100%'; msg.textContent='Done. Parsing data...';
     setTimeout(function(){bar.style.display='none';},800);
     var txt=(result&&result.data&&result.data.text)?result.data.text:(result&&result.text?result.text:'');
-    if(!txt){document.getElementById('qlt-status').textContent='OCR returned no text. Try a clearer screenshot.';return;}
-    try{parseQltText(txt);}catch(pe){document.getElementById('qlt-status').textContent='Parse error: '+pe.message;console.error('parseQltText error:',pe);}
+    if(!txt){document.getElementById('qlt-status'+sfx).textContent='OCR returned no text. Try a clearer screenshot.';return;}
+    try{parseQltText(txt,type);}catch(pe){document.getElementById('qlt-status'+sfx).textContent='Parse error: '+pe.message;console.error('parseQltText error:',pe);}
   }).catch(function(err){
     bar.style.display='none';
-    document.getElementById('qlt-status').textContent='OCR error: '+(err&&err.message?err.message:String(err));
+    document.getElementById('qlt-status'+sfx).textContent='OCR error: '+(err&&err.message?err.message:String(err));
   });
 }
-
-function parseQltText(raw){
+function parseQltText(raw,type){
+  type=type||'mtd';
+  var sfx=type==='ytd'?'-ytd':'';
+  var store=(type==='ytd')?qltDataYTD:qltData;
   var _step='init';
   try{
   _step='split'; var lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
-  // Debug: show raw OCR lines
-  var dbg=document.getElementById('qlt-debug');
-  if(dbg){
-    dbg.style.display='block';
-    dbg.textContent='── RAW OCR ('+lines.length+' lines) ──\n'+lines.join('\n');
-  }
-  _step='qltData init'; qltData={};
-  // Merge consecutive lines belonging to same branch
+  var dbg=document.getElementById('qlt-debug'+sfx);
+  if(dbg){dbg.style.display='block';dbg.textContent='-- RAW OCR ('+lines.length+' lines) --\n'+lines.join('\n');}
+  _step='init store'; if(type==='ytd'){qltDataYTD={};store=qltDataYTD;}else{qltData={};store=qltData;}
   _step='merge'; var merged=[];
   for(var i=0;i<lines.length;i++){
     _step='matchBranch line '+i;
-    var bc=matchBranch(lines[i]);
-    var startLine=lines[i];
-    // Try combining current + next line — handles OCR wrapping store names across 2 lines
-    // Use lines[i+1] as startLine (not combo) so header garbage from line i doesn't pollute numbers
-    if(!bc && i+1<lines.length){
-      var combo=lines[i]+' '+lines[i+1];
-      var bc2=matchBranch(combo);
-      if(bc2){bc=bc2; startLine=lines[i+1]; i++;}
-    }
+    var bc=matchBranch(lines[i]); var startLine=lines[i];
+    if(!bc&&i+1<lines.length){var combo=lines[i]+' '+lines[i+1];var bc2=matchBranch(combo);if(bc2){bc=bc2;startLine=lines[i+1];i++;}}
     if(bc){
       var row=startLine;
-      while(i+1<lines.length && !matchBranch(lines[i+1]) && /\d/.test(lines[i+1]) && lines[i+1].length<120){
-        i++; row+=' '+lines[i];
-      }
+      while(i+1<lines.length&&!matchBranch(lines[i+1])&&/\d/.test(lines[i+1])&&lines[i+1].length<120){i++;row+=' '+lines[i];}
       merged.push({bc:bc,row:row});
     }
   }
-  // Build map of digit-bearing parts of branch names (e.g. "Highway 2000" → 2000) so we can strip them per-row.
   var nameDigits={};
   QBR.forEach(function(q){var dm=(q.name||'').match(/\b(\d+)\b/);if(dm)nameDigits[q.code]=new RegExp('\\b'+dm[1]+'\\b','g');});
   merged.forEach(function(m){
-    var bc=m.bc, row=m.row;
-    // Strip "CODE|" prefix (handles misread codes like "67|" for "87|") — use text after last pipe
-    var dataRow=row.lastIndexOf('|')!==-1 ? row.substring(row.lastIndexOf('|')+1) : row;
-    // Normalize comma-formatted numbers: "1,165" → "1165"
+    var bc=m.bc,row=m.row;
+    var dataRow=row.lastIndexOf('|')!==-1?row.substring(row.lastIndexOf('|')+1):row;
     dataRow=dataRow.replace(/(\d),(\d)/g,'$1$2');
-    // Strip store-name tokens — letter-led words including digits ATTACHED (no space) like "C6". Then strip standalone digit suffixes like "2000" from "Highway 2000".
     dataRow=dataRow.replace(/[a-zA-Z][a-zA-Z\/]*\d*/g,' ');
     if(nameDigits[bc])dataRow=dataRow.replace(nameDigits[bc],' ');
-    // Extract numbers including leading-dot decimals like .02
     var nums=(dataRow.match(/-?\.?\d+\.?\d*/g)||[]).map(parseFloat).filter(function(n){return !isNaN(n);});
-    // Safety: filter out store codes that leaked through when OCR loses the "|" separator (e.g. "3353 Gil Fernando" → 3353 ends up as nums[0]).
     var STORE_CODES=[3353,3595,3702,3753,87,67,88,0087];
     nums=nums.filter(function(n){return !STORE_CODES.includes(Math.abs(n));});
-    // POSITIONAL MAPPING — take values exactly as the Qualtrics column order shows them.
-    // No bucketed classification (size-range guessing scrambles columns when data crosses ranges).
-    // Qualtrics Store/Restaurant/Cafe Summary column order:
-    // [0]NPS Count [1]NPS [2]NPS Var [3]OSAT Count [4]OSAT Top2Box% [5]OSAT [6]OSAT Var [7]NFT Score [8]NFT Var [9]LtRet Count [10]LtRet Score [11]LtRet Var
-    if(nums.length<3) return; // not enough data — skip empty/garbage rows
-    // Skip if this branch already has more values from another row match
-    var existing=qltData[bc];
-    if(existing && existing._score >= nums.length) return;
-    // Sanity: Tesseract OCR sometimes drops decimal points ("4.8" → 48, "2.9" → 29).
-    // Rescue values outside known ranges by dividing by 10. Real ranges:
-    //   NPS 0-100, NPS Var ±100, OSAT/LtRet 0-5, OSAT Var/LtRet Var ±5, NFT 0-10, NFT Var ±10, Top2Box 0-100.
+    if(nums.length<3)return;
+    var existing=store[bc];
+    if(existing&&existing._score>=nums.length)return;
     var fix=function(v,maxAbs){if(v===null||v===undefined)return v;return Math.abs(v)>maxAbs?v/10:v;};
     var def=function(i){return nums[i]!==undefined?nums[i]:null;};
-    var e={branch:bc,period:document.getElementById('qlt-period').value||'',
-           date:document.getElementById('qlt-date').value||today,
-           _score:nums.length,
-           npsCount:def(0),
-           nps:fix(def(1),100), npsVar:fix(def(2),100),
-           osatCount:def(3), osatTop2:fix(def(4),100),
-           osat:fix(def(5),5), osatVar:fix(def(6),5),
-           nft:fix(def(7),10), nftVar:fix(def(8),10),
-           ltretCount:def(9), ltret:fix(def(10),5), ltretVar:fix(def(11),5)};
-    qltData[bc]=e;
+    var periodVal=(type==='ytd'?(document.getElementById('qlt-period-ytd').value||''):(document.getElementById('qlt-period').value||''));
+    var dateVal=(type==='ytd'?(document.getElementById('qlt-date-ytd').value||today):(document.getElementById('qlt-date').value||today));
+    var e={branch:bc,period:periodVal,date:dateVal,_score:nums.length,
+           npsCount:def(0),nps:fix(def(1),100),npsVar:fix(def(2),100),
+           osatCount:def(3),osatTop2:fix(def(4),100),osat:fix(def(5),5),osatVar:fix(def(6),5),
+           nft:fix(def(7),10),nftVar:fix(def(8),10),ltretCount:def(9),ltret:fix(def(10),5),ltretVar:fix(def(11),5)};
+    store[bc]=e;
   });
-  _step='check results'; if(!Object.keys(qltData).length){
-    document.getElementById('qlt-status').textContent='Could not detect branch data — ensure store codes/names are visible in screenshot.';
-    return;
-  }
-  _step='renderQltGrid'; renderQltGrid();
-  }catch(e){document.getElementById('qlt-status').textContent='Error at ['+_step+']: '+e.message;console.error('parseQltText step='+_step,e);}
+  _step='check'; if(!Object.keys(store).length){document.getElementById('qlt-status'+sfx).textContent='Could not detect branch data.';return;}
+  _step='render'; renderQltGrid(type);
+  }catch(e){document.getElementById('qlt-status'+sfx).textContent='Error at ['+_step+']: '+e.message;console.error('parseQltText step='+_step,e);}
 }
-
 function matchBranch(line){
   for(var i=0;i<QBR.length;i++){if(QBR[i].pat.test(line))return QBR[i].code;}
   return null;
 }
 
-function renderQltGrid(){
-  // Build a compact preview of what was detected — no editable table
-  var preview=document.getElementById('qlt-preview');
+function renderQltGrid(type){
+  type=type||'mtd';
+  var sfx=type==='ytd'?'-ytd':'';
+  var store=(type==='ytd')?qltDataYTD:qltData;
+  var preview=document.getElementById('qlt-preview'+sfx);
   var lines=[];
   QBR.forEach(function(b){
-    var d=qltData[b.code];
+    var d=store[b.code];
     if(!d)return;
     var parts=[];
-    if(d.nps!==null)parts.push('NPS '+d.nps+(d.npsVar!==null?' ('+( d.npsVar>0?'+':'')+d.npsVar+')':''));
+    if(d.nps!==null)parts.push('NPS '+d.nps+(d.npsVar!==null?' ('+(d.npsVar>0?'+':'')+d.npsVar+')':''));
     if(d.osat!==null)parts.push('OSAT '+d.osat);
     if(d.ltret!==null)parts.push('LtRet '+d.ltret);
     if(d.nft!==null)parts.push('NFT '+d.nft);
     lines.push('<b>'+b.name+'</b>  '+parts.join(' · '));
   });
   if(preview)preview.innerHTML=lines.join('<br>');
-  document.getElementById('qlt-grid').style.display='block';
-  var foundCodes=Object.keys(qltData);
+  document.getElementById('qlt-grid'+sfx).style.display='block';
+  var foundCodes=Object.keys(store);
   var found=foundCodes.map(function(bc){return bc.replace('JB','');}).join(', ');
   var missed=QBR.filter(function(b){return foundCodes.indexOf(b.code)===-1;}).map(function(b){return b.name;}).join(', ');
   var msg='Detected: '+found;
   if(missed)msg+=' | Not found: '+missed;
-  document.getElementById('qlt-status').textContent=msg+' — set period then Save.';
-  document.getElementById('qlt-status').style.color=missed?'var(--amber)':'var(--blue)';
+  document.getElementById('qlt-status'+sfx).textContent=msg+' — set period then Save.';
+  document.getElementById('qlt-status'+sfx).style.color=missed?'var(--amber)':'var(--blue)';
 }
-
-function saveQltExtracted(){
-  var period=document.getElementById('qlt-period').value||'';
-  var rDate=document.getElementById('qlt-date').value||today;
-  if(!period){document.getElementById('qlt-status').textContent='Set the period first (e.g. Apr 2026)';return;}
+function saveQltExtracted(type){
+  type=type||'mtd';
+  var sfx=type==='ytd'?'-ytd':'';
+  var store=(type==='ytd')?qltDataYTD:qltData;
+  var period=(type==='ytd'?(document.getElementById('qlt-period-ytd').value||''):(document.getElementById('qlt-period').value||''));
+  var rDate=(type==='ytd'?(document.getElementById('qlt-date-ytd').value||today):(document.getElementById('qlt-date').value||today));
+  if(!period){document.getElementById('qlt-status'+sfx).textContent='Set the period first (e.g. Apr 2026)';return;}
   var saved=[];
-  // Save directly from qltData — no intermediate input fields needed
-  Object.keys(qltData).forEach(function(bc){
-    var d=qltData[bc];
+  Object.keys(store).forEach(function(bc){
+    var d=store[bc];
     if(!d||d.nps===null&&d.osat===null&&d.ltret===null)return;
-    var data={branch:bc,period:period,date:rDate,
+    var data={branch:bc,period:period,date:rDate,period_type:type,
               npsCount:d.npsCount,nps:d.nps,npsVar:d.npsVar,
               osatCount:d.osatCount,osatTop2:d.osatTop2,osat:d.osat,osatVar:d.osatVar,
-              nft:d.nft,nftVar:d.nftVar,
-              ltretCount:d.ltretCount,ltret:d.ltret,ltretVar:d.ltretVar};
+              nft:d.nft,nftVar:d.nftVar,ltretCount:d.ltretCount,ltret:d.ltret,ltretVar:d.ltretVar};
     var found=false;
     for(var j=0;j<npsManual.length;j++){
-      if(npsManual[j].branch===bc&&npsManual[j].period===period){
+      if(npsManual[j].branch===bc&&npsManual[j].period===period&&(npsManual[j].period_type||'mtd')===type){
         Object.keys(data).forEach(function(fk){if(data[fk]!==null)npsManual[j][fk]=data[fk];});
         found=true;break;
       }
@@ -3840,27 +3847,25 @@ function saveQltExtracted(){
     if(!found)npsManual.push(data);
     saved.push(bc.replace('JB',''));
   });
-  if(!saved.length){document.getElementById('qlt-status').textContent='No data to save.';return;}
+  if(!saved.length){document.getElementById('qlt-status'+sfx).textContent='No data to save.';return;}
   try{localStorage.setItem('jb_nps_manual',JSON.stringify(npsManual));}catch(ex){}
   renderOthersTable();
-  var st=document.getElementById('qlt-status');
-  st.textContent='✓ Saved — '+saved.join(', ')+' · '+period;
+  var st=document.getElementById('qlt-status'+sfx);
+  st.textContent='✓ Saved '+type.toUpperCase()+' — '+saved.join(', ')+' · '+period;
   st.style.color='var(--green)';
 }
-
-function resetQltPaste(){
-  document.getElementById('qlt-img').style.display='none';
-  document.getElementById('qlt-zone-prompt').style.display='block';
-  document.getElementById('qlt-grid').style.display='none';
-  document.getElementById('qlt-preview').innerHTML='';
-  document.getElementById('qlt-ocr-bar').style.display='none';
-  document.getElementById('qlt-status').textContent='';
-  document.getElementById('qlt-status').style.color='';
-  qltData={};
+function resetQltPaste(type){
+  type=type||'mtd';
+  var sfx=type==='ytd'?'-ytd':'';
+  document.getElementById('qlt-img'+sfx).style.display='none';
+  document.getElementById('qlt-zone-prompt'+sfx).style.display='block';
+  document.getElementById('qlt-grid'+sfx).style.display='none';
+  document.getElementById('qlt-preview'+sfx).innerHTML='';
+  document.getElementById('qlt-ocr-bar'+sfx).style.display='none';
+  document.getElementById('qlt-status'+sfx).textContent='';
+  document.getElementById('qlt-status'+sfx).style.color='';
+  if(type==='ytd'){qltDataYTD={};}else{qltData={};}
 }
-
-// ── SYNC DATA BETWEEN DEVICES (export/import all localStorage) ──
-var SYNC_KEYS=['jb_sub3','jb_voc_all','jb_voc_dismissed','jb_voc_last_fetch','jb_nps_manual','jb_tgt3','jb_pcf','jb_pcf_seeded','jb_pcf_sync','jb_fas','jb_fu','jb_quot','jb_equip','jb_email_archived'];
 function openSyncModal(){
   document.getElementById('sync-modal').style.display='flex';
   document.getElementById('sync-import-txt').value='';
